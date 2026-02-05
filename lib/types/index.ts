@@ -51,14 +51,14 @@ export interface ShoeSize {
   order: number;
 }
 
-export interface ShoeColor {
+export type ShoeColor = {
   id: string;
   name: string;
   hexCode?: string;
+  images?: { url: string }[];
   isActive: boolean;
   order: number;
-}
-
+};
 /* =========================
    PRODUCT – IMAGES
 ========================= */
