@@ -141,22 +141,25 @@ export async function POST(req: NextRequest) {
 
     /* ================= DECREMENT STOCK ================= */
 
-    await productRef.update({
-      colors: productData.colors.map((c: any) => {
-        if (c.colorId !== variant.colorId) return c;
+    if (!productData || !productData.colors) {
+  throw new Error('Product data is missing or invalid');
+}
 
-        return {
-          ...c,
-          sizes: c.sizes.map((s: any) =>
-            Number(s.size) === Number(variant.size)
-              ? { ...s, stock: s.stock - quantity }
-              : s
-          ),
-        };
-      }),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+await productRef.update({
+  colors: productData.colors.map((c: any) => {
+    if (c.colorId !== variant.colorId) return c;
 
+    return {
+      ...c,
+      sizes: c.sizes.map((s: any) =>
+        Number(s.size) === Number(variant.size)
+          ? { ...s, stock: s.stock - quantity }
+          : s
+      ),
+    };
+  }),
+  updatedAt: FieldValue.serverTimestamp(),
+});
     /* ================= AUDIT ================= */
 
     await adminDb.collection('audit_logs').add({
