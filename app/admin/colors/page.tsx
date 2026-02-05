@@ -66,7 +66,7 @@ export default function ColorsPage() {
 
     try {
       setUploading(true);
-      let imageUrl = editingColor?.image;
+     let imageUrl = editingColor?.images?.[0]?.url || '';
 
       if (imageFile) {
         imageUrl = await uploadImage(imageFile);
