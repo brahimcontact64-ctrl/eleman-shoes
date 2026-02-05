@@ -1,0 +1,36 @@
+{
+  "sizes": [
+    { "value": 36, "isActive": true, "order": 1 },
+    { "value": 37, "isActive": true, "order": 2 },
+    { "value": 38, "isActive": true, "order": 3 },
+    { "value": 39, "isActive": true, "order": 4 },
+    { "value": 40, "isActive": true, "order": 5 },
+    { "value": 41, "isActive": true, "order": 6 },
+    { "value": 42, "isActive": true, "order": 7 },
+    { "value": 43, "isActive": true, "order": 8 },
+    { "value": 44, "isActive": true, "order": 9 },
+    { "value": 45, "isActive": true, "order": 10 }
+  ],
+  "colors": [
+    { "name": "Black", "hexCode": "#000000", "isActive": true, "order": 1 },
+    { "name": "Brown", "hexCode": "#8B4513", "isActive": true, "order": 2 },
+    { "name": "Tan", "hexCode": "#D2B48C", "isActive": true, "order": 3 },
+    { "name": "Burgundy", "hexCode": "#800020", "isActive": true, "order": 4 },
+    { "name": "Navy Blue", "hexCode": "#000080", "isActive": true, "order": 5 },
+    { "name": "White", "hexCode": "#FFFFFF", "isActive": true, "order": 6 },
+    { "name": "Gray", "hexCode": "#808080", "isActive": true, "order": 7 },
+    { "name": "Camel", "hexCode": "#C19A6B", "isActive": true, "order": 8 },
+    { "name": "Chestnut", "hexCode": "#954535", "isActive": true, "order": 9 },
+    { "name": "Cognac", "hexCode": "#9A463D", "isActive": true, "order": 10 },
+    { "name": "Oxblood", "hexCode": "#4A0404", "isActive": true, "order": 11 },
+    { "name": "Mahogany", "hexCode": "#C04000", "isActive": true, "order": 12 },
+    { "name": "Walnut", "hexCode": "#773F1A", "isActive": true, "order": 13 },
+    { "name": "Dark Brown", "hexCode": "#5C4033", "isActive": true, "order": 14 },
+    { "name": "Light Brown", "hexCode": "#B5651D", "isActive": true, "order": 15 },
+    { "name": "Beige", "hexCode": "#F5F5DC", "isActive": true, "order": 16 },
+    { "name": "Olive", "hexCode": "#808000", "isActive": true, "order": 17 },
+    { "name": "Charcoal", "hexCode": "#36454F", "isActive": true, "order": 18 },
+    { "name": "Espresso", "hexCode": "#4E312D", "isActive": true, "order": 19 },
+    { "name": "Tobacco", "hexCode": "#7A3A17", "isActive": true, "order": 20 }
+  ]
+}

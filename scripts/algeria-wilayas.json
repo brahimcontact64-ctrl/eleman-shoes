@@ -1,0 +1,416 @@
+{
+  "01": {
+    "code": "01",
+    "name": "Adrar",
+    "cities": [
+      {"name": "Adrar", "price": 800},
+      {"name": "Tamest", "price": 850},
+      {"name": "Reggane", "price": 900},
+      {"name": "Timimoun", "price": 850}
+    ]
+  },
+  "16": {
+    "code": "16",
+    "name": "Alger",
+    "cities": [
+      {"name": "Bab El Oued", "price": 400},
+      {"name": "Bir Mourad Rais", "price": 400},
+      {"name": "Kouba", "price": 400},
+      {"name": "Hussein Dey", "price": 400},
+      {"name": "Rouiba", "price": 450},
+      {"name": "Draria", "price": 450}
+    ]
+  },
+  "09": {
+    "code": "09",
+    "name": "Blida",
+    "cities": [
+      {"name": "Blida", "price": 450},
+      {"name": "Bouinan", "price": 500},
+      {"name": "Larbaa", "price": 500}
+    ]
+  },
+  "10": {
+    "code": "10",
+    "name": "Bouira",
+    "cities": [
+      {"name": "Bouira", "price": 550},
+      {"name": "Lakhdaria", "price": 600},
+      {"name": "Ain Bessem", "price": 600}
+    ]
+  },
+  "35": {
+    "code": "35",
+    "name": "Boumerdes",
+    "cities": [
+      {"name": "Boumerdes", "price": 450},
+      {"name": "Dellys", "price": 500},
+      {"name": "Khemis El Khechna", "price": 500}
+    ]
+  },
+  "06": {
+    "code": "06",
+    "name": "Bejaia",
+    "cities": [
+      {"name": "Bejaia", "price": 600},
+      {"name": "Akbou", "price": 650},
+      {"name": "Amizour", "price": 650}
+    ]
+  },
+  "07": {
+    "code": "07",
+    "name": "Biskra",
+    "cities": [
+      {"name": "Biskra", "price": 650},
+      {"name": "Tolga", "price": 700},
+      {"name": "Ouled Djellal", "price": 700}
+    ]
+  },
+  "08": {
+    "code": "08",
+    "name": "Bechar",
+    "cities": [
+      {"name": "Bechar", "price": 850},
+      {"name": "Beni Abbes", "price": 900}
+    ]
+  },
+  "02": {
+    "code": "02",
+    "name": "Chlef",
+    "cities": [
+      {"name": "Chlef", "price": 550},
+      {"name": "Tenes", "price": 600},
+      {"name": "Oued Fodda", "price": 600}
+    ]
+  },
+  "25": {
+    "code": "25",
+    "name": "Constantine",
+    "cities": [
+      {"name": "Constantine", "price": 600},
+      {"name": "El Khroub", "price": 650},
+      {"name": "Ain Smara", "price": 650}
+    ]
+  },
+  "17": {
+    "code": "17",
+    "name": "Djelfa",
+    "cities": [
+      {"name": "Djelfa", "price": 650},
+      {"name": "Messaad", "price": 700},
+      {"name": "Ain Oussera", "price": 700}
+    ]
+  },
+  "32": {
+    "code": "32",
+    "name": "El Bayadh",
+    "cities": [
+      {"name": "El Bayadh", "price": 750},
+      {"name": "Brezina", "price": 800}
+    ]
+  },
+  "39": {
+    "code": "39",
+    "name": "El Oued",
+    "cities": [
+      {"name": "El Oued", "price": 700},
+      {"name": "Robbah", "price": 750},
+      {"name": "Debila", "price": 750}
+    ]
+  },
+  "36": {
+    "code": "36",
+    "name": "El Tarf",
+    "cities": [
+      {"name": "El Tarf", "price": 700},
+      {"name": "Ben M'hidi", "price": 750},
+      {"name": "Besbes", "price": 750}
+    ]
+  },
+  "23": {
+    "code": "23",
+    "name": "Annaba",
+    "cities": [
+      {"name": "Annaba", "price": 650},
+      {"name": "El Bouni", "price": 650},
+      {"name": "Berrahal", "price": 700}
+    ]
+  },
+  "18": {
+    "code": "18",
+    "name": "Jijel",
+    "cities": [
+      {"name": "Jijel", "price": 650},
+      {"name": "El Milia", "price": 700},
+      {"name": "Taher", "price": 700}
+    ]
+  },
+  "19": {
+    "code": "19",
+    "name": "Setif",
+    "cities": [
+      {"name": "Setif", "price": 600},
+      {"name": "El Eulma", "price": 650},
+      {"name": "Ain Azel", "price": 650}
+    ]
+  },
+  "20": {
+    "code": "20",
+    "name": "Saida",
+    "cities": [
+      {"name": "Saida", "price": 650},
+      {"name": "Ain El Hadjar", "price": 700}
+    ]
+  },
+  "21": {
+    "code": "21",
+    "name": "Skikda",
+    "cities": [
+      {"name": "Skikda", "price": 650},
+      {"name": "Azzaba", "price": 700},
+      {"name": "El Harrouch", "price": 700}
+    ]
+  },
+  "22": {
+    "code": "22",
+    "name": "Sidi Bel Abbes",
+    "cities": [
+      {"name": "Sidi Bel Abbes", "price": 650},
+      {"name": "Telagh", "price": 700}
+    ]
+  },
+  "26": {
+    "code": "26",
+    "name": "Medea",
+    "cities": [
+      {"name": "Medea", "price": 550},
+      {"name": "Berrouaghia", "price": 600},
+      {"name": "Ksar Boukhari", "price": 600}
+    ]
+  },
+  "27": {
+    "code": "27",
+    "name": "Mostaganem",
+    "cities": [
+      {"name": "Mostaganem", "price": 600},
+      {"name": "Ain Tedles", "price": 650}
+    ]
+  },
+  "28": {
+    "code": "28",
+    "name": "M'Sila",
+    "cities": [
+      {"name": "M'Sila", "price": 650},
+      {"name": "Bou Saada", "price": 700}
+    ]
+  },
+  "29": {
+    "code": "29",
+    "name": "Mascara",
+    "cities": [
+      {"name": "Mascara", "price": 650},
+      {"name": "Sig", "price": 700}
+    ]
+  },
+  "30": {
+    "code": "30",
+    "name": "Ouargla",
+    "cities": [
+      {"name": "Ouargla", "price": 750},
+      {"name": "Hassi Messaoud", "price": 800},
+      {"name": "Touggourt", "price": 800}
+    ]
+  },
+  "31": {
+    "code": "31",
+    "name": "Oran",
+    "cities": [
+      {"name": "Oran", "price": 550},
+      {"name": "Bir El Djir", "price": 550},
+      {"name": "Es Senia", "price": 600},
+      {"name": "Arzew", "price": 600}
+    ]
+  },
+  "03": {
+    "code": "03",
+    "name": "Laghouat",
+    "cities": [
+      {"name": "Laghouat", "price": 700},
+      {"name": "Aflou", "price": 750}
+    ]
+  },
+  "04": {
+    "code": "04",
+    "name": "Oum El Bouaghi",
+    "cities": [
+      {"name": "Oum El Bouaghi", "price": 650},
+      {"name": "Ain Beida", "price": 700},
+      {"name": "Ain M'Lila", "price": 700}
+    ]
+  },
+  "05": {
+    "code": "05",
+    "name": "Batna",
+    "cities": [
+      {"name": "Batna", "price": 650},
+      {"name": "Barika", "price": 700},
+      {"name": "Arris", "price": 700}
+    ]
+  },
+  "11": {
+    "code": "11",
+    "name": "Tamanrasset",
+    "cities": [
+      {"name": "Tamanrasset", "price": 1000},
+      {"name": "In Salah", "price": 1050}
+    ]
+  },
+  "12": {
+    "code": "12",
+    "name": "Tebessa",
+    "cities": [
+      {"name": "Tebessa", "price": 700},
+      {"name": "Bir El Ater", "price": 750},
+      {"name": "Cheria", "price": 750}
+    ]
+  },
+  "13": {
+    "code": "13",
+    "name": "Tlemcen",
+    "cities": [
+      {"name": "Tlemcen", "price": 650},
+      {"name": "Maghnia", "price": 700},
+      {"name": "Ghazaouet", "price": 700}
+    ]
+  },
+  "14": {
+    "code": "14",
+    "name": "Tiaret",
+    "cities": [
+      {"name": "Tiaret", "price": 650},
+      {"name": "Sougueur", "price": 700}
+    ]
+  },
+  "15": {
+    "code": "15",
+    "name": "Tizi Ouzou",
+    "cities": [
+      {"name": "Tizi Ouzou", "price": 550},
+      {"name": "Draa Ben Khedda", "price": 600},
+      {"name": "Azazga", "price": 600}
+    ]
+  },
+  "24": {
+    "code": "24",
+    "name": "Guelma",
+    "cities": [
+      {"name": "Guelma", "price": 650},
+      {"name": "Heliopolis", "price": 700}
+    ]
+  },
+  "33": {
+    "code": "33",
+    "name": "Illizi",
+    "cities": [
+      {"name": "Illizi", "price": 1000},
+      {"name": "Djanet", "price": 1050}
+    ]
+  },
+  "34": {
+    "code": "34",
+    "name": "Bordj Bou Arreridj",
+    "cities": [
+      {"name": "Bordj Bou Arreridj", "price": 600},
+      {"name": "Ras El Oued", "price": 650}
+    ]
+  },
+  "37": {
+    "code": "37",
+    "name": "Tindouf",
+    "cities": [
+      {"name": "Tindouf", "price": 950}
+    ]
+  },
+  "38": {
+    "code": "38",
+    "name": "Tissemsilt",
+    "cities": [
+      {"name": "Tissemsilt", "price": 650},
+      {"name": "Khemisti", "price": 700}
+    ]
+  },
+  "40": {
+    "code": "40",
+    "name": "Khenchela",
+    "cities": [
+      {"name": "Khenchela", "price": 700},
+      {"name": "Kais", "price": 750}
+    ]
+  },
+  "41": {
+    "code": "41",
+    "name": "Souk Ahras",
+    "cities": [
+      {"name": "Souk Ahras", "price": 700},
+      {"name": "Sedrata", "price": 750}
+    ]
+  },
+  "42": {
+    "code": "42",
+    "name": "Tipaza",
+    "cities": [
+      {"name": "Tipaza", "price": 450},
+      {"name": "Kolea", "price": 500},
+      {"name": "Cherchell", "price": 500}
+    ]
+  },
+  "43": {
+    "code": "43",
+    "name": "Mila",
+    "cities": [
+      {"name": "Mila", "price": 650},
+      {"name": "Chelghoum Laid", "price": 700}
+    ]
+  },
+  "44": {
+    "code": "44",
+    "name": "Ain Defla",
+    "cities": [
+      {"name": "Ain Defla", "price": 550},
+      {"name": "Khemis Miliana", "price": 600}
+    ]
+  },
+  "45": {
+    "code": "45",
+    "name": "Naama",
+    "cities": [
+      {"name": "Naama", "price": 750},
+      {"name": "Mecheria", "price": 800}
+    ]
+  },
+  "46": {
+    "code": "46",
+    "name": "Ain Temouchent",
+    "cities": [
+      {"name": "Ain Temouchent", "price": 600},
+      {"name": "Hammam Bou Hadjar", "price": 650}
+    ]
+  },
+  "47": {
+    "code": "47",
+    "name": "Ghardaia",
+    "cities": [
+      {"name": "Ghardaia", "price": 700},
+      {"name": "Metlili", "price": 750},
+      {"name": "Berriane", "price": 750}
+    ]
+  },
+  "48": {
+    "code": "48",
+    "name": "Relizane",
+    "cities": [
+      {"name": "Relizane", "price": 600},
+      {"name": "Oued Rhiou", "price": 650}
+    ]
+  }
+}

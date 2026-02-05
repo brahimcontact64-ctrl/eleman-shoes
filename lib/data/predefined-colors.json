@@ -1,0 +1,46 @@
+{
+  "dress_shoes_colors": [
+    {
+      "name": "Black",
+      "hexCode": "#000000",
+      "category": "dress_shoes"
+    },
+    {
+      "name": "Brown",
+      "hexCode": "#8B4513",
+      "category": "dress_shoes"
+    },
+    {
+      "name": "Coff",
+      "hexCode": "#6F4E37",
+      "category": "dress_shoes"
+    }
+  ],
+  "leather_shoes_colors": [
+    {
+      "name": "Black leather",
+      "hexCode": "#1C1C1C",
+      "category": "leather_shoes"
+    },
+    {
+      "name": "Black leather / Black nubuk",
+      "hexCode": "#2C2C2C",
+      "category": "leather_shoes"
+    },
+    {
+      "name": "Kaki nubuk",
+      "hexCode": "#8B7355",
+      "category": "leather_shoes"
+    },
+    {
+      "name": "Brown nubuk",
+      "hexCode": "#8B6914",
+      "category": "leather_shoes"
+    },
+    {
+      "name": "Grey nubuk",
+      "hexCode": "#708090",
+      "category": "leather_shoes"
+    }
+  ]
+}
