@@ -51,14 +51,15 @@ export interface ShoeSize {
   order: number;
 }
 
-export type ShoeColor = {
+export interface ShoeColor {
+  image: any;
   id: string;
   name: string;
   hexCode?: string;
-  images?: { url: string }[];
   isActive: boolean;
   order: number;
-};
+}
+
 /* =========================
    PRODUCT – IMAGES
 ========================= */
@@ -74,6 +75,7 @@ export interface ProductColorImage {
 
 /** مخزون مقاس واحد داخل لون */
 export interface ProductSizeStock {
+  stock: any;
   size: number;        // مثال: 42
   quantity: number;    // الكمية
 }
@@ -310,6 +312,7 @@ export type AuditAction =
   | 'INVOICE_PRINTED'
   | 'SETTINGS_UPDATE'
   | 'USER_CREATE'
+  | 'DELIVERY_INITIALIZE'
   | 'USER_ROLE_UPDATE'
   | 'USER_DISABLE'
   | 'CUSTOMER_ORDER_CREATED';
