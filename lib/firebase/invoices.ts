@@ -93,7 +93,7 @@ export async function generateInvoice(
     },
     orderDetails: {
       size: order.selectedSize,
-      color: order.selectedColor.name,
+     color: order.selectedColor ? order.selectedColor.name : '—',
       quantity: order.quantity,
     },
     totals: {
