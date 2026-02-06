@@ -75,107 +75,53 @@ export default function Home() {
       <Navbar />
 
       <main>
-        {/* ================= HERO ================= */}
-        <section className="relative min-h-[90vh] md:h-[700px] overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center bg-black">
+        {/* ================= HERO (FIXED MOBILE) ================= */}
+        <section className="relative w-full overflow-hidden">
+          {/* MOBILE IMAGE CONTAINER */}
+          <div className="relative w-full aspect-[4/5] md:hidden">
             <img
               src={settings.heroImage}
               alt="Chaussures en cuir de qualité"
-              className="
-                w-full h-full
-                object-contain md:object-cover
-                object-center
-              "
+              className="absolute inset-0 w-full h-full object-contain"
             />
-            <div className="absolute inset-0 bg-black/30 md:bg-gradient-to-r md:from-black/40 md:via-black/30 md:to-transparent"></div>
+            <div className="absolute inset-0 bg-black/35" />
           </div>
 
-          <div className="relative container mx-auto px-4 h-full flex items-end md:items-center pb-24 md:pb-0">
-            <div className="max-w-xl text-white text-center md:text-left">
-              <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif font-bold mb-4 leading-tight drop-shadow-lg">
-                {settings.heroTitle}
-              </h1>
+          {/* DESKTOP IMAGE */}
+          <div className="relative hidden md:block h-[700px]">
+            <img
+              src={settings.heroImage}
+              alt="Chaussures en cuir de qualité"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/30 to-transparent" />
+          </div>
 
-              <p className="text-lg md:text-2xl mb-6 drop-shadow-md font-light">
-                {settings.heroSubtitle}
-              </p>
+          {/* HERO CONTENT */}
+          <div className="absolute inset-0 flex items-center">
+            <div className="container mx-auto px-4 text-white text-center md:text-left">
+              <div className="max-w-xl">
+                <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif font-bold mb-4 drop-shadow-lg">
+                  {settings.heroTitle}
+                </h1>
 
-              <a
-                href={`https://wa.me/${settings.whatsappNumber}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block"
-              >
-                <Button
-                  size="lg"
-                  className="bg-leather-coffee hover:bg-leather-dark text-white text-lg px-8 py-5 rounded-full shadow-xl transition-transform hover:scale-105"
+                <p className="text-lg md:text-2xl mb-6 drop-shadow-md font-light">
+                  {settings.heroSubtitle}
+                </p>
+
+                <a
+                  href={`https://wa.me/${settings.whatsappNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  {settings.heroCtaText}
-                </Button>
-              </a>
-            </div>
-          </div>
-        </section>
-
-        {/* ================= FEATURES ================= */}
-        <section className="py-16 bg-white">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <Card className="border-leather-light/30 hover:shadow-lg transition-shadow bg-leather-beige/50">
-                <CardContent className="p-6 text-center">
-                  <div className="flex justify-center mb-4">
-                    <div className="w-16 h-16 rounded-full bg-leather-light/30 flex items-center justify-center">
-                      <Star className="h-8 w-8 text-leather-brown" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2 text-leather-dark">Large Sélection</h3>
-                  <p className="text-leather-gray">
-                    Des centaines de modèles pour tous les styles et occasions
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-leather-light/30 hover:shadow-lg transition-shadow bg-leather-beige/50">
-                <CardContent className="p-6 text-center">
-                  <div className="flex justify-center mb-4">
-                    <div className="w-16 h-16 rounded-full bg-leather-light/30 flex items-center justify-center">
-                      <Shield className="h-8 w-8 text-leather-brown" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2 text-leather-dark">Qualité Premium</h3>
-                  <p className="text-leather-gray">
-                    Chaussures en cuir véritable de haute qualité
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-leather-light/30 hover:shadow-lg transition-shadow bg-leather-beige/50">
-                <CardContent className="p-6 text-center">
-                  <div className="flex justify-center mb-4">
-                    <div className="w-16 h-16 rounded-full bg-leather-light/30 flex items-center justify-center">
-                      <Truck className="h-8 w-8 text-leather-brown" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2 text-leather-dark">Livraison Rapide</h3>
-                  <p className="text-leather-gray">
-                    Livraison dans toute l&apos;Algérie sous 48-72h
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-leather-light/30 hover:shadow-lg transition-shadow bg-leather-beige/50">
-                <CardContent className="p-6 text-center">
-                  <div className="flex justify-center mb-4">
-                    <div className="w-16 h-16 rounded-full bg-leather-light/30 flex items-center justify-center">
-                      <Zap className="h-8 w-8 text-leather-brown" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2 text-leather-dark">Paiement Sécurisé</h3>
-                  <p className="text-leather-gray">
-                    Paiement à la livraison pour votre sécurité
-                  </p>
-                </CardContent>
-              </Card>
+                  <Button
+                    size="lg"
+                    className="bg-leather-coffee hover:bg-leather-dark text-white px-8 py-5 rounded-full shadow-xl"
+                  >
+                    {settings.heroCtaText}
+                  </Button>
+                </a>
+              </div>
             </div>
           </div>
         </section>
@@ -184,15 +130,19 @@ export default function Home() {
         <section className="py-16 bg-leather-beige">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold mb-4 text-leather-dark">Produits Populaires</h2>
-              <p className="text-xl text-leather-gray">Découvrez nos meilleures ventes</p>
+              <h2 className="text-4xl font-bold mb-4 text-leather-dark">
+                Produits Populaires
+              </h2>
+              <p className="text-xl text-leather-gray">
+                Découvrez nos meilleures ventes
+              </p>
             </div>
 
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-leather-brown"></div>
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-leather-brown" />
               </div>
-            ) : products.length > 0 ? (
+            ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {products.map((product) => (
                   <ProductCard
@@ -201,12 +151,6 @@ export default function Home() {
                     brand={brands.get(product.brandId)}
                   />
                 ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-xl text-leather-gray">
-                  Aucun produit disponible pour le moment
-                </p>
               </div>
             )}
 
@@ -220,33 +164,28 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ================= FEATURES ================= */}
+        <section className="py-16 bg-white">
+          <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <Feature icon={Star} title="Large Sélection" text="Des centaines de modèles pour tous les styles et occasions" />
+            <Feature icon={Shield} title="Qualité Premium" text="Chaussures en cuir véritable de haute qualité" />
+            <Feature icon={Truck} title="Livraison Rapide" text="Livraison dans toute l’Algérie sous 48–72h" />
+            <Feature icon={Zap} title="Paiement Sécurisé" text="Paiement à la livraison pour votre sécurité" />
+          </div>
+        </section>
+
         {/* ================= CTA ================= */}
         <section className="py-20 bg-gradient-to-br from-leather-brown to-leather-coffee text-white">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-4xl font-bold mb-6">Prêt à Commander ?</h2>
             <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
-              Contactez-nous dès maintenant pour passer votre commande ou pour toute question
+              Contactez-nous dès maintenant pour passer votre commande
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/catalog">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="w-full sm:w-auto text-lg px-8 bg-white text-leather-dark hover:bg-leather-beige"
-                >
-                  Parcourir le Catalogue
-                </Button>
-              </Link>
-              <Link href="/contact">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto text-lg px-8 bg-transparent border-2 border-white text-white hover:bg-white hover:text-leather-coffee"
-                >
-                  Nous Contacter
-                </Button>
-              </Link>
-            </div>
+            <Link href="/contact">
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-leather-coffee">
+                Nous Contacter
+              </Button>
+            </Link>
           </div>
         </section>
       </main>
@@ -254,5 +193,19 @@ export default function Home() {
       <Footer />
       <WhatsAppButton />
     </>
+  );
+}
+
+function Feature({ icon: Icon, title, text }: any) {
+  return (
+    <Card className="bg-leather-beige/50 text-center">
+      <CardContent className="p-6">
+        <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-leather-light/30 flex items-center justify-center">
+          <Icon className="h-8 w-8 text-leather-brown" />
+        </div>
+        <h3 className="text-xl font-semibold mb-2 text-leather-dark">{title}</h3>
+        <p className="text-leather-gray">{text}</p>
+      </CardContent>
+    </Card>
   );
 }
