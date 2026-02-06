@@ -315,7 +315,7 @@ export type AuditAction =
   | 'DELIVERY_INITIALIZE'
   | 'USER_ROLE_UPDATE'
   | 'USER_DISABLE'
-  | 'ORDER_UPDATE';
+  | 'ORDER_UPDATE'
   | 'CUSTOMER_ORDER_CREATED';
 
 export type TargetType =
