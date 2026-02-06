@@ -74,41 +74,29 @@ export default function Home() {
     <>
       <Navbar />
 
-      <main className="bg-leather-beige overflow-hidden">
+      <main className="bg-leather-beige">
 
-        {/* ================= HERO ================= */}
-        <section className="relative w-full bg-black">
+        {/* ================= HERO (FIXED FINAL) ================= */}
+        <section className="relative w-full h-[100svh] md:h-[700px]">
+          <img
+            src={settings.heroImage}
+            alt="Chaussures en cuir"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
 
-          {/* MOBILE */}
-          <div className="relative md:hidden aspect-[4/5] w-full">
-            <img
-              src={settings.heroImage}
-              alt="Chaussures en cuir"
-              className="absolute inset-0 w-full h-full object-contain"
-            />
-            <div className="absolute inset-0 bg-black/35" />
-          </div>
+          <div className="absolute inset-0 bg-black/40" />
 
-          {/* DESKTOP */}
-          <div className="relative hidden md:block h-[700px]">
-            <img
-              src={settings.heroImage}
-              alt="Chaussures en cuir"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/45 via-black/30 to-transparent" />
-          </div>
-
-          {/* CONTENT */}
-          <div className="absolute inset-0 flex items-center">
+          <div className="relative z-10 h-full flex items-center">
             <div className="container mx-auto px-4 text-white text-center md:text-left">
               <div className="max-w-xl">
                 <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif font-bold mb-4 drop-shadow-lg">
                   {settings.heroTitle}
                 </h1>
+
                 <p className="text-lg md:text-2xl mb-6 drop-shadow-md">
                   {settings.heroSubtitle}
                 </p>
+
                 <a
                   href={`https://wa.me/${settings.whatsappNumber}`}
                   target="_blank"
@@ -126,7 +114,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ================= PRODUCTS (مباشرة بعد الهيرو) ================= */}
+        {/* ================= PRODUCTS ================= */}
         <section className="py-16">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
@@ -153,14 +141,6 @@ export default function Home() {
                 ))}
               </div>
             )}
-
-            <div className="text-center mt-12">
-              <Link href="/catalog">
-                <Button size="lg" className="bg-leather-brown hover:bg-leather-coffee text-white">
-                  Voir Tous les Produits
-                </Button>
-              </Link>
-            </div>
           </div>
         </section>
 
