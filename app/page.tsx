@@ -74,41 +74,41 @@ export default function Home() {
     <>
       <Navbar />
 
-      {/* background عام حتى ما يبقاش أبيض من تحت */}
-      <main className="bg-leather-beige">
+      <main className="bg-leather-beige overflow-hidden">
 
-        {/* ================= HERO (FIXED 100%) ================= */}
+        {/* ================= HERO ================= */}
         <section className="relative w-full bg-black">
 
-          {/* IMAGE */}
-          <div className="relative w-full">
+          {/* MOBILE */}
+          <div className="relative md:hidden aspect-[4/5] w-full">
             <img
               src={settings.heroImage}
               alt="Chaussures en cuir"
-              className="
-                w-full
-                h-auto
-                max-h-[90vh]
-                object-contain
-                md:h-[700px]
-                md:object-cover
-              "
+              className="absolute inset-0 w-full h-full object-contain"
             />
-            <div className="absolute inset-0 bg-black/40" />
+            <div className="absolute inset-0 bg-black/35" />
+          </div>
+
+          {/* DESKTOP */}
+          <div className="relative hidden md:block h-[700px]">
+            <img
+              src={settings.heroImage}
+              alt="Chaussures en cuir"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/45 via-black/30 to-transparent" />
           </div>
 
           {/* CONTENT */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="container mx-auto px-4 text-center md:text-left text-white z-10">
-              <div className="max-w-xl mx-auto md:mx-0">
+          <div className="absolute inset-0 flex items-center">
+            <div className="container mx-auto px-4 text-white text-center md:text-left">
+              <div className="max-w-xl">
                 <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif font-bold mb-4 drop-shadow-lg">
                   {settings.heroTitle}
                 </h1>
-
                 <p className="text-lg md:text-2xl mb-6 drop-shadow-md">
                   {settings.heroSubtitle}
                 </p>
-
                 <a
                   href={`https://wa.me/${settings.whatsappNumber}`}
                   target="_blank"
@@ -116,15 +116,7 @@ export default function Home() {
                 >
                   <Button
                     size="lg"
-                    className="
-                      bg-leather-coffee
-                      hover:bg-leather-dark
-                      text-white
-                      px-10
-                      py-6
-                      rounded-full
-                      shadow-xl
-                    "
+                    className="bg-leather-coffee hover:bg-leather-dark text-white px-10 py-6 rounded-full shadow-xl"
                   >
                     {settings.heroCtaText}
                   </Button>
@@ -134,7 +126,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ================= PRODUCTS ================= */}
+        {/* ================= PRODUCTS (مباشرة بعد الهيرو) ================= */}
         <section className="py-16">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
@@ -190,10 +182,7 @@ export default function Home() {
               Contactez-nous dès maintenant pour passer votre commande
             </p>
             <Link href="/contact">
-              <Button
-                size="lg"
-                className="bg-white text-leather-dark hover:bg-leather-beige"
-              >
+              <Button size="lg" className="bg-white text-leather-dark hover:bg-leather-beige">
                 Nous Contacter
               </Button>
             </Link>
