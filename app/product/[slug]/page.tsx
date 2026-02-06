@@ -196,11 +196,11 @@ export default function ProductPage({ params }: ProductPageProps) {
               </p>
 
               {/* SIZES */}
-              {product.sizes?.length > 0 && (
+             {(product.sizes?.length ?? 0) > 0 && (
                 <div className="mb-6">
                   <h3 className="font-semibold mb-2">{t('sizes')}</h3>
                   <div className="flex flex-wrap gap-2">
-                    {product.sizes.map(size => (
+                   {(product.sizes ?? []).map(size => (
                       <button
                         key={size}
                         onClick={() => setSelectedSize(size)}
