@@ -10,7 +10,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { Order, OrderStatus } from '@/lib/types';
+import { Order, OrderStatus, DeliveryStatus } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { createAuditLog, getUserAgent } from '@/lib/firebase/audit';
 import ProtectedRoute from '@/components/admin/ProtectedRoute';
@@ -51,7 +51,7 @@ import { toast } from 'sonner';
 
 /* ================= TYPES ================= */
 
-type DeliveryStatus = 'pending' | 'on_the_way' | 'delivered';
+
 
 /* ================= PAGE ================= */
 
@@ -148,12 +148,14 @@ export default function AdminOrdersPage() {
     return <Badge className={cls}>{label}</Badge>;
   };
 
-  const deliveryBadge = (status: DeliveryStatus) => {
-    const map: any = {
-      pending: ['En attente', 'bg-gray-100 text-gray-700'],
-      on_the_way: ['En route', 'bg-orange-100 text-orange-800'],
-      delivered: ['Livrée', 'bg-green-100 text-green-800'],
-    };
+ const deliveryBadge = (status: DeliveryStatus) => {
+  const map: any = {
+    pending: ['En attente', 'bg-gray-100 text-gray-700'],
+    preparing: ['Préparation', 'bg-yellow-100 text-yellow-800'],
+    shipped: ['En route', 'bg-orange-100 text-orange-800'],
+    delivered: ['Livrée', 'bg-green-100 text-green-800'],
+    returned: ['Retournée', 'bg-red-100 text-red-800'],
+  };
     const [label, cls] = map[status];
     return <Badge className={cls}>{label}</Badge>;
   };
