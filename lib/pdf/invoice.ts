@@ -44,7 +44,7 @@ export async function generateInvoicePDF(
   doc.text('Produit: ' + order.product.name, 15, 103);
   doc.text('Marque: ' + (order.product.brandName || ''), 15, 109);
   doc.text('Pointure: ' + order.selectedSize, 15, 115);
-  doc.text('Couleur: ' + order.selectedColor.name, 15, 121);
+  doc.text('Couleur: ' + (order.selectedColor?.name ?? '—'), 15, 121);
 
   autoTable(doc, {
     startY: 130,
