@@ -73,27 +73,27 @@ export interface ProductColorImage {
    PRODUCT – STOCK
 ========================= */
 
-/** مخزون مقاس واحد داخل لون */
+
 export interface ProductSizeStock {
   stock: any;
-  size: number;        // مثال: 42
-  quantity: number;    // الكمية
+  size: number;        
+  quantity: number;    
 }
 
-/** لون داخل المنتج */
+
 export interface ProductColor {
   colorId: string;
   name: string;
   hexCode?: string;
 
-  /** صور خاصة باللون */
+
   images: ProductColorImage[];
 
-  /** 🔥 مقاسات + كميات (المعتمد فعليًا) */
+ 
   sizes: ProductSizeStock[];
 }
 
-/** Variant (اختياري – دعم قديم / مستقبلي) */
+
 export interface ProductVariant {
   size: number;
   colorId: string;
@@ -135,6 +135,12 @@ export interface Product {
 /* =========================
    ORDERS
 ========================= */
+export type DeliveryStatus =
+  | 'pending'
+  | 'preparing'
+  | 'shipped'
+  | 'delivered'
+  | 'returned';
 
 export type OrderStatus =
   | 'new'
@@ -142,9 +148,14 @@ export type OrderStatus =
   | 'delivered'
   | 'cancelled';
 
+/* =========================
+   ORDER
+========================= */
 export interface Order {
   id: string;
   orderNumber: string;
+
+  deliveryStatus?: DeliveryStatus; 
 
   customer: {
     fullName: string;
@@ -163,7 +174,6 @@ export interface Order {
     image?: string;
   };
 
-  /** 🔥 الاختيار الحقيقي */
   selectedSize: number;
 
   selectedColor?: {
