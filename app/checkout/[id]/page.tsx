@@ -260,7 +260,8 @@ export default function CheckoutPage() {
             className="grid grid-cols-1 lg:grid-cols-12 gap-8"
           >
             {/* LEFT */}
-            <div className="lg:col-span-7 space-y-6">
+            <div className="order-2 lg:order-1 lg:col-span-7 space-y-6">
+      
               {/* CLIENT */}
               <Card>
                 <CardHeader>
@@ -315,7 +316,7 @@ export default function CheckoutPage() {
             </div>
 
             {/* RIGHT */}
-            <div className="lg:col-span-5">
+            <div className="order-1 lg:order-2 lg:col-span-5">
               <Card className="sticky top-4">
                 <CardHeader>
                   <CardTitle>Produit</CardTitle>
