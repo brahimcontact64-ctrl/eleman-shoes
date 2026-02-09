@@ -250,13 +250,28 @@ export default function AdminOrdersPage() {
                     </div>
                   </div>
 
-                  {/* ⭐ ADDED – PRODUIT */}
-                  <div className="border rounded-md p-3 space-y-1">
-                    <div><strong>📦 Produit:</strong> {selectedOrder.product.name}</div>
-                   <div><strong>👞 Pointure:</strong> {selectedOrder.selectedSize}</div>
-<div><strong>🎨 Couleur:</strong> {selectedOrder.selectedColor?.name}</div>
-                    <div><strong>💰 Prix:</strong> {formatPrice(selectedOrder.product.price)}</div>
-                  </div>
+                 {/* ⭐ ADDED – PRODUIT */}
+<div className="border rounded-md p-3 space-y-1">
+  <div>
+    <strong>📦 Produit:</strong>{' '}
+    {selectedOrder.product.name}
+  </div>
+
+  <div>
+    <strong>👞 Pointure:</strong>{' '}
+    {selectedOrder.selectedSize || '-'}
+  </div>
+
+  <div>
+    <strong>🎨 Couleur:</strong>{' '}
+    {selectedOrder.selectedColor?.name || '-'}
+  </div>
+
+  <div>
+    <strong>💰 Prix:</strong>{' '}
+    {formatPrice(selectedOrder.product.price)}
+  </div>
+</div>
 
                   {/* ⭐ ADDED – LIVRAISON */}
                   <div className="border rounded-md p-3 space-y-1">
