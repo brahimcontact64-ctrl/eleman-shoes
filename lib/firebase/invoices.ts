@@ -86,7 +86,7 @@ export async function generateInvoice(
       wilayaNameAr: order.delivery.wilayaNameAr,
       cityNameFr: order.delivery.cityNameFr,
       cityNameAr: order.delivery.cityNameAr,
-      deliveryType: order.delivery.deliveryType,
+  deliveryType: order.delivery.type,
       price: order.delivery.price,
       delayDays: order.delivery.delayDays,
       fullAddress: order.delivery.fullAddress,
