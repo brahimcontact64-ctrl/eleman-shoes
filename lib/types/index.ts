@@ -152,6 +152,7 @@ export type OrderStatus =
    ORDER
 ========================= */
 export interface Order {
+  
   id: string;
   orderNumber: string;
 
@@ -173,6 +174,11 @@ export interface Order {
     brandName?: string;
     image?: string;
   };
+  variant?: {
+    size?: number;
+    colorId?: string;
+    colorName?: string;
+  };
 
   selectedSize: number;
 
@@ -186,6 +192,7 @@ export interface Order {
   quantity: number;
 
   delivery: {
+    type: string;
     wilaya?: string;
     city?: string;
     wilayaNameFr?: string;
