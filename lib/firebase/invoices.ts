@@ -32,11 +32,11 @@ export interface Invoice {
     delayDays?: number;
     fullAddress?: string;
   };
-  orderDetails: {
-    size: number;
-    color: string;
-    quantity: number;
-  };
+ orderDetails: {
+  size: number | null;
+  color: string;
+  quantity: number;
+};
   totals: {
     subtotal: number;
     delivery: number;
@@ -92,7 +92,7 @@ export async function generateInvoice(
       fullAddress: order.delivery.fullAddress,
     },
    orderDetails: {
-  size: order.variant?.size ?? '—',
+  size: order.variant?.size ?? null,
   color: order.variant?.colorName ?? '—',
   quantity: order.quantity,
 },

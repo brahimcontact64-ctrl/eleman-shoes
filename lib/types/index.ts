@@ -174,7 +174,7 @@ export interface Order {
     image?: string;
   };
 
-  // ✅ المعتمد رسمياً
+ 
   variant?: {
     size?: number;
     colorId?: string;
@@ -225,13 +225,38 @@ export interface Invoice {
   id: string;
   invoiceNumber: string;
   orderId: string;
+
   customerName: string;
+
+  deliverySnapshot: {
+    wilayaNameFr?: string;
+    wilayaNameAr?: string;
+    cityNameFr?: string;
+    cityNameAr?: string;
+    deliveryType: 'home' | 'stopdesk';
+    price: number;
+    delayDays?: number;
+    fullAddress?: string;
+  };
+
+  orderDetails: {
+    size?: number | null;
+    color?: string | null;
+    quantity: number;
+  };
+
+  totals: {
+    subtotal: number;
+    delivery: number;
+    total: number;
+  };
+
   pdfUrl: string;
   total: number;
   generatedBy: string;
+
   createdAt: Timestamp;
 }
-
 /* =========================
    DELIVERY
 ========================= */
