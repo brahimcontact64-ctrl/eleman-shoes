@@ -40,20 +40,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { formatPrice } from '@/lib/firebase/utils';
-import {
-  Eye,
-  Filter,
-  CheckCircle2,
-  XCircle,
-  Clock,
-} from 'lucide-react';
+import { Eye, Filter } from 'lucide-react';
 import { toast } from 'sonner';
-
-/* ================= TYPES ================= */
-
-
-
-/* ================= PAGE ================= */
 
 export default function AdminOrdersPage() {
   const { user } = useAuth();
@@ -65,8 +53,6 @@ export default function AdminOrdersPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-
-  /* ================= LOAD ================= */
 
   useEffect(() => {
     fetchOrders();
@@ -102,8 +88,6 @@ export default function AdminOrdersPage() {
     }
   };
 
-  /* ================= UPDATE STATUS ================= */
-
   const updateOrderField = async (
     orderId: string,
     updates: Partial<Order>,
@@ -136,8 +120,6 @@ export default function AdminOrdersPage() {
     }
   };
 
-  /* ================= BADGES ================= */
-
   const statusBadge = (status: OrderStatus) => {
     const map: any = {
       new: ['Nouvelle', 'bg-blue-100 text-blue-800'],
@@ -148,19 +130,17 @@ export default function AdminOrdersPage() {
     return <Badge className={cls}>{label}</Badge>;
   };
 
- const deliveryBadge = (status: DeliveryStatus) => {
-  const map: any = {
-    pending: ['En attente', 'bg-gray-100 text-gray-700'],
-    preparing: ['Préparation', 'bg-yellow-100 text-yellow-800'],
-    shipped: ['En route', 'bg-orange-100 text-orange-800'],
-    delivered: ['Livrée', 'bg-green-100 text-green-800'],
-    returned: ['Retournée', 'bg-red-100 text-red-800'],
-  };
+  const deliveryBadge = (status: DeliveryStatus) => {
+    const map: any = {
+      pending: ['En attente', 'bg-gray-100 text-gray-700'],
+      preparing: ['Préparation', 'bg-yellow-100 text-yellow-800'],
+      shipped: ['En route', 'bg-orange-100 text-orange-800'],
+      delivered: ['Livrée', 'bg-green-100 text-green-800'],
+      returned: ['Retournée', 'bg-red-100 text-red-800'],
+    };
     const [label, cls] = map[status];
     return <Badge className={cls}>{label}</Badge>;
   };
-
-  /* ================= LOADING ================= */
 
   if (loading) {
     return (
@@ -174,13 +154,10 @@ export default function AdminOrdersPage() {
     );
   }
 
-  /* ================= RENDER ================= */
-
   return (
     <ProtectedRoute>
       <AdminLayout>
         <div className="space-y-6">
-
           <div>
             <h1 className="text-3xl font-bold">Commandes</h1>
             <p className="text-gray-600">Gestion des commandes clients</p>
@@ -255,22 +232,50 @@ export default function AdminOrdersPage() {
           {/* ================= DIALOG ================= */}
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogContent>
+            <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Détails commande</DialogTitle>
               </DialogHeader>
 
               {selectedOrder && (
-                <div className="space-y-4">
+                <div className="space-y-4 text-sm">
 
-                  <div>
-                    <strong>Client:</strong> {selectedOrder.customer.fullName}
+                  {/* ⭐ ADDED – CLIENT */}
+                  <div className="border rounded-md p-3 space-y-1">
+                    <div><strong>👤 Client:</strong> {selectedOrder.customer.fullName}</div>
+                    <div><strong>📞 Téléphone:</strong> {selectedOrder.customer.phone}</div>
+                    <div>
+                      <strong>📍 Adresse:</strong>{' '}
+                      {selectedOrder.customer.addressDetails} – {selectedOrder.customer.wilaya}
+                    </div>
                   </div>
 
-                  <div>
-                    <strong>Adresse:</strong> {selectedOrder.customer.addressDetails}
+                  {/* ⭐ ADDED – PRODUIT */}
+                  <div className="border rounded-md p-3 space-y-1">
+                    <div><strong>📦 Produit:</strong> {selectedOrder.product.name}</div>
+                    <div><strong>👞 Pointure:</strong> {selectedOrder.variant?.size}</div>
+                    <div><strong>🎨 Couleur:</strong> {selectedOrder.variant?.colorName}</div>
+                    <div><strong>💰 Prix:</strong> {formatPrice(selectedOrder.product.price)}</div>
                   </div>
 
+                  {/* ⭐ ADDED – LIVRAISON */}
+                  <div className="border rounded-md p-3 space-y-1">
+                    <div>
+                      <strong>🚚 Livraison:</strong>{' '}
+                      {selectedOrder.delivery.type === 'home' ? 'À domicile' : 'Point relais'}
+                    </div>
+                    <div>
+                      <strong>💸 Frais:</strong> {formatPrice(selectedOrder.delivery.price)}
+                    </div>
+                    <div>
+                      <strong>🧾 Total:</strong>{' '}
+                      <span className="font-semibold">
+                        {formatPrice(selectedOrder.total)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* STATUS */}
                   <div className="space-y-2">
                     <strong>Statut commande</strong>
                     <Select
