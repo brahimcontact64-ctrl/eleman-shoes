@@ -91,11 +91,11 @@ export async function generateInvoice(
       delayDays: order.delivery.delayDays,
       fullAddress: order.delivery.fullAddress,
     },
-    orderDetails: {
-      size: order.selectedSize,
-     color: order.selectedColor ? order.selectedColor.name : '—',
-      quantity: order.quantity,
-    },
+   orderDetails: {
+  size: order.variant?.size ?? '—',
+  color: order.variant?.colorName ?? '—',
+  quantity: order.quantity,
+},
     totals: {
       subtotal: order.product.price * order.quantity,
       delivery: order.delivery.price,
