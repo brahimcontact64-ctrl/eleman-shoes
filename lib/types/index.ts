@@ -152,11 +152,10 @@ export type OrderStatus =
    ORDER
 ========================= */
 export interface Order {
-  
   id: string;
   orderNumber: string;
 
-  deliveryStatus?: DeliveryStatus; 
+  deliveryStatus?: DeliveryStatus;
 
   customer: {
     fullName: string;
@@ -174,32 +173,24 @@ export interface Order {
     brandName?: string;
     image?: string;
   };
+
+  // ✅ المعتمد رسمياً
   variant?: {
     size?: number;
     colorId?: string;
     colorName?: string;
   };
 
-  selectedSize: number;
-
-  selectedColor?: {
-    colorId: string;
-    name: string;
-    hexCode?: string;
-    image?: string;
-  };
-
   quantity: number;
 
   delivery: {
-    type: string;
+    type: 'home' | 'stopdesk';
     wilaya?: string;
     city?: string;
     wilayaNameFr?: string;
     wilayaNameAr?: string;
     cityNameFr?: string;
     cityNameAr?: string;
-    deliveryType?: 'home' | 'stopdesk';
     price: number;
     delayDays?: number;
     fullAddress?: string;
@@ -207,6 +198,7 @@ export interface Order {
 
   total: number;
   notes?: string;
+
   status: OrderStatus;
   source: 'website' | 'admin' | 'whatsapp';
 
@@ -225,7 +217,6 @@ export interface Order {
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
-
 /* =========================
    INVOICES
 ========================= */

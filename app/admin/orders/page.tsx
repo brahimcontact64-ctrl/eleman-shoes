@@ -249,22 +249,20 @@ export default function AdminOrdersPage() {
                       {selectedOrder.customer.addressDetails} – {selectedOrder.customer.wilaya}
                     </div>
                   </div>
-
-                 {/* ⭐ ADDED – PRODUIT */}
+{/* ⭐ PRODUIT */}
 <div className="border rounded-md p-3 space-y-1">
   <div>
-    <strong>📦 Produit:</strong>{' '}
-    {selectedOrder.product.name}
+    <strong>📦 Produit:</strong> {selectedOrder.product.name}
   </div>
 
   <div>
     <strong>👞 Pointure:</strong>{' '}
-    {selectedOrder.selectedSize || '-'}
+    {selectedOrder.variant?.size ?? '-'}
   </div>
 
   <div>
     <strong>🎨 Couleur:</strong>{' '}
-    {selectedOrder.selectedColor?.name || '-'}
+    {selectedOrder.variant?.colorName ?? '-'}
   </div>
 
   <div>
@@ -272,7 +270,6 @@ export default function AdminOrdersPage() {
     {formatPrice(selectedOrder.product.price)}
   </div>
 </div>
-
                   {/* ⭐ ADDED – LIVRAISON */}
                   <div className="border rounded-md p-3 space-y-1">
                     <div>
