@@ -253,8 +253,8 @@ export default function AdminOrdersPage() {
                   {/* ⭐ ADDED – PRODUIT */}
                   <div className="border rounded-md p-3 space-y-1">
                     <div><strong>📦 Produit:</strong> {selectedOrder.product.name}</div>
-                    <div><strong>👞 Pointure:</strong> {selectedOrder.variant?.size}</div>
-                    <div><strong>🎨 Couleur:</strong> {selectedOrder.variant?.colorName}</div>
+                   <div><strong>👞 Pointure:</strong> {selectedOrder.selectedSize}</div>
+<div><strong>🎨 Couleur:</strong> {selectedOrder.selectedColor?.name}</div>
                     <div><strong>💰 Prix:</strong> {formatPrice(selectedOrder.product.price)}</div>
                   </div>
 
