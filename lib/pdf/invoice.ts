@@ -35,7 +35,8 @@ export async function generateInvoicePDF(
   doc.text('Commune: ' + order.customer.city, 15, 76);
   doc.text('Wilaya: ' + order.customer.wilaya, 15, 82);
 
-  const deliveryTypeLabel = order.delivery.deliveryType === 'home' ? 'Domicile' : 'Stop Desk';
+const deliveryTypeLabel =
+  order.delivery.type === 'home' ? 'Domicile' : 'Stop Desk';
   const deliveryInfo = `${deliveryTypeLabel} (${order.delivery.delayDays || 1} jour${(order.delivery.delayDays || 1) > 1 ? 's' : ''})`;
 
   doc.setFontSize(12);
@@ -43,8 +44,17 @@ export async function generateInvoicePDF(
   doc.setFontSize(10);
   doc.text('Produit: ' + order.product.name, 15, 103);
   doc.text('Marque: ' + (order.product.brandName || ''), 15, 109);
-  doc.text('Pointure: ' + order.selectedSize, 15, 115);
- doc.text('Couleur: ' + (order.selectedColor?.name ?? '—'), 15, 121);
+doc.text(
+  'Pointure: ' + (order.variant?.size ?? '—'),
+  15,
+  115
+);
+
+doc.text(
+  'Couleur: ' + (order.variant?.colorName ?? '—'),
+  15,
+  125
+);
 
   autoTable(doc, {
     startY: 130,
