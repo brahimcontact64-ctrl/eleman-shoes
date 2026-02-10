@@ -143,10 +143,10 @@ export type DeliveryStatus =
   | 'returned';
 
 export type OrderStatus =
-  | 'new'
-  | 'confirmed'
-  | 'delivered'
-  | 'cancelled';
+  | 'pending'    
+  | 'new'        
+  | 'confirmed'  
+  | 'cancelled'; 
 
 /* =========================
    ORDER
@@ -256,6 +256,29 @@ export interface Invoice {
   generatedBy: string;
 
   createdAt: Timestamp;
+}
+export interface SiteSettings {
+  siteName: string;
+  logoUrl?: string;
+
+  whatsapp?: string;
+  whatsappNumber?: string;
+  email?: string;
+
+  socialMedia?: {
+    facebook?: string;
+    instagram?: string;
+    tiktok?: string;
+    twitter?: string;
+    youtube?: string;
+    linkedin?: string;
+  };
+
+  theme?: {
+    primary?: string;
+    secondary?: string;
+    accent?: string;
+  };
 }
 /* =========================
    DELIVERY

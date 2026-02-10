@@ -120,27 +120,30 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const statusBadge = (status: OrderStatus) => {
-    const map: any = {
-      new: ['Nouvelle', 'bg-blue-100 text-blue-800'],
-      confirmed: ['Confirmée', 'bg-yellow-100 text-yellow-800'],
-      cancelled: ['Annulée', 'bg-red-100 text-red-800'],
-    };
-    const [label, cls] = map[status];
-    return <Badge className={cls}>{label}</Badge>;
+const statusBadge = (status: OrderStatus) => {
+  const map: any = {
+    pending: ['En attente client', 'bg-gray-100 text-gray-700'],
+    new: ['Nouvelle', 'bg-blue-100 text-blue-800'],
+    confirmed: ['Confirmée', 'bg-green-100 text-green-800'],
+    cancelled: ['Annulée', 'bg-red-100 text-red-800'],
   };
 
-  const deliveryBadge = (status: DeliveryStatus) => {
-    const map: any = {
-      pending: ['En attente', 'bg-gray-100 text-gray-700'],
-      preparing: ['Préparation', 'bg-yellow-100 text-yellow-800'],
-      shipped: ['En route', 'bg-orange-100 text-orange-800'],
-      delivered: ['Livrée', 'bg-green-100 text-green-800'],
-      returned: ['Retournée', 'bg-red-100 text-red-800'],
-    };
-    const [label, cls] = map[status];
-    return <Badge className={cls}>{label}</Badge>;
+  const [label, cls] = map[status] || ['Inconnu', 'bg-gray-100'];
+  return <Badge className={cls}>{label}</Badge>;
+};
+
+const deliveryBadge = (status: DeliveryStatus) => {
+  const map: Record<string, [string, string]> = {
+    pending: ['En attente', 'bg-gray-100 text-gray-700'],
+    preparing: ['Préparation', 'bg-yellow-100 text-yellow-800'],
+    on_the_way: ['En route', 'bg-orange-100 text-orange-800'], // ✅ صح
+    delivered: ['Livrée', 'bg-green-100 text-green-800'],
+    returned: ['Retournée', 'bg-red-100 text-red-800'],
   };
+
+  const [label, cls] = map[status] || ['Inconnu', 'bg-gray-200 text-gray-600'];
+  return <Badge className={cls}>{label}</Badge>;
+};
 
   if (loading) {
     return (
@@ -169,12 +172,13 @@ export default function AdminOrdersPage() {
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                <SelectItem value="new">Nouvelles</SelectItem>
-                <SelectItem value="confirmed">Confirmées</SelectItem>
-                <SelectItem value="cancelled">Annulées</SelectItem>
-              </SelectContent>
+             <SelectContent>
+  <SelectItem value="all">Tous</SelectItem>
+  <SelectItem value="pending">En attente client</SelectItem>
+  <SelectItem value="new">Nouvelles</SelectItem>
+  <SelectItem value="confirmed">Confirmées</SelectItem>
+  <SelectItem value="cancelled">Annulées</SelectItem>
+</SelectContent>
             </Select>
             <span className="ml-auto text-sm text-gray-600">
               {filteredOrders.length} commande(s)
@@ -301,11 +305,12 @@ export default function AdminOrdersPage() {
                       }
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="new">Nouvelle</SelectItem>
-                        <SelectItem value="confirmed">Confirmée</SelectItem>
-                        <SelectItem value="cancelled">Annulée</SelectItem>
-                      </SelectContent>
+                    <SelectContent>
+  <SelectItem value="pending">En attente client</SelectItem>
+  <SelectItem value="new">Nouvelle</SelectItem>
+  <SelectItem value="confirmed">Confirmée</SelectItem>
+  <SelectItem value="cancelled">Annulée</SelectItem>
+</SelectContent>
                     </Select>
                   </div>
 
