@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy
+} from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Product, Brand, Category } from '@/lib/types';
 import Navbar from '@/components/Navbar';
@@ -9,7 +15,13 @@ import Footer from '@/components/Footer';
 import WhatsAppButton from '@/components/WhatsAppButton';
 import ProductCard from '@/components/ProductCard';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Search } from 'lucide-react';
 
@@ -50,14 +62,15 @@ export default function CatalogPage() {
 
   const fetchData = async () => {
     try {
-      const brandsQuery = query(collection(db, 'brands'));
-      const brandsSnapshot = await getDocs(brandsQuery);
+      /* ================= BRANDS ================= */
+      const brandsSnapshot = await getDocs(collection(db, 'brands'));
       const brandsMap = new Map<string, Brand>();
       brandsSnapshot.forEach((doc) => {
         brandsMap.set(doc.id, { id: doc.id, ...doc.data() } as Brand);
       });
       setBrands(brandsMap);
 
+      /* ================= CATEGORIES ================= */
       const categoriesSnapshot = await getDocs(collection(db, 'categories'));
       const categoriesData = categoriesSnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -65,14 +78,22 @@ export default function CatalogPage() {
       })) as Category[];
       setCategories(categoriesData);
 
-      const productsQuery = query(collection(db, 'products'), where('isActive', '==', true));
+      /* ================= PRODUCTS (ORDERED 🔥) ================= */
+      const productsQuery = query(
+        collection(db, 'products'),
+        where('isActive', '==', true),
+        orderBy('createdAt', 'desc') // 🔥 الأحدث أولاً
+      );
+
       const productsSnapshot = await getDocs(productsQuery);
       const productsData = productsSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Product[];
+
       setProducts(productsData);
       setFilteredProducts(productsData);
+
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -93,10 +114,13 @@ export default function CatalogPage() {
       <Navbar />
       <main className="min-h-screen bg-leather-beige">
         <div className="container mx-auto px-4 py-8">
-          <h1 className="text-4xl font-bold mb-8 text-leather-dark">{t('all_products')}</h1>
+          <h1 className="text-4xl font-bold mb-8 text-leather-dark">
+            {t('all_products')}
+          </h1>
 
           <div className="bg-white rounded-lg shadow-md p-4 mb-8 border border-leather-light/20">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -134,17 +158,24 @@ export default function CatalogPage() {
                   ))}
                 </SelectContent>
               </Select>
+
             </div>
           </div>
 
           {filteredProducts.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-xl text-gray-600">{t('no_products')}</p>
+              <p className="text-xl text-gray-600">
+                {t('no_products')}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} brand={brands.get(product.brandId)} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  brand={brands.get(product.brandId)}
+                />
               ))}
             </div>
           )}
