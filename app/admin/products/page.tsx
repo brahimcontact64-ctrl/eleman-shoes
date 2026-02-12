@@ -51,17 +51,6 @@ import { Plus, Pencil, Trash2, X } from 'lucide-react';
 
 const STANDARD_SIZES = [36, 37, 38, 39, 40, 41, 42, 43, 44, 45];
 
-/* ✅ UPDATED COLORS (ONLY CHANGE) */
-const STANDARD_COLORS = [
-  { name: 'Noir' },
-  { name: 'Marron' },
-  { name: 'Coff' },
-  { name: 'Noir cuir' },
-  { name: 'Noir cuir / Noir nubuk' },
-  { name: 'Kaki nubuk' },
-  { name: 'Marron nubuk' },
-  { name: 'Gris nubuk' },
-];
 
 /* ================= TYPES ================= */
 
@@ -75,6 +64,13 @@ type ColorForm = {
   files: File[];
   sizes: SizeStock[];
 };
+type AvailableColor = {
+  id: string;
+  name: string;
+  hexCode?: string;
+  isActive?: boolean;
+  order?: number;
+};
 
 /* ================= COMPONENT ================= */
 
@@ -85,6 +81,7 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+ const [availableColors, setAvailableColors] = useState<AvailableColor[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -99,13 +96,7 @@ export default function AdminProductsPage() {
     isActive: true,
   });
 
-  const [colors, setColors] = useState<ColorForm[]>(
-    STANDARD_COLORS.map(c => ({
-      name: c.name,
-      files: [],
-      sizes: STANDARD_SIZES.map(s => ({ size: s, stock: 0 })),
-    }))
-  );
+  const [colors, setColors] = useState<ColorForm[]>([]);
 
   /* ================= FETCH ================= */
 
@@ -114,29 +105,40 @@ export default function AdminProductsPage() {
   }, []);
 
   const fetchData = async () => {
-    const [brandsSnap, categoriesSnap, productsSnap] = await Promise.all([
-      getDocs(collection(db, 'brands')),
-      getDocs(collection(db, 'categories')),
-      getDocs(collection(db, 'products')),
-    ]);
+  const [brandsSnap, categoriesSnap, productsSnap, colorsSnap] = await Promise.all([
+    getDocs(collection(db, 'brands')),
+    getDocs(collection(db, 'categories')),
+    getDocs(collection(db, 'products')),
+    getDocs(collection(db, 'colors')), // ✅ جديد
+  ]);
 
-    setBrands(brandsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Brand[]);
-    setCategories(categoriesSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Category[]);
-    setProducts(productsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Product[]);
-    setLoading(false);
-  };
+  setBrands(brandsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Brand[]);
+  setCategories(categoriesSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Category[]);
+  setProducts(productsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Product[]);
+const colorsData: AvailableColor[] = colorsSnap.docs.map((d) => ({
+  id: d.id,
+  ...(d.data() as Omit<AvailableColor, 'id'>),
+}));
+
+setAvailableColors(
+  colorsData
+    .filter((c) => c.isActive)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+);
+
+  setLoading(false);
+};
 
   /* ================= COLORS ================= */
-
-  const addColor = () =>
-    setColors(prev => [
-      ...prev,
-      {
-        name: '',
-        files: [],
-        sizes: STANDARD_SIZES.map(s => ({ size: s, stock: 0 })),
-      },
-    ]);
+const addColor = () =>
+  setColors(prev => [
+    ...prev,
+    {
+      name: '',
+      files: [],
+      sizes: STANDARD_SIZES.map(s => ({ size: s, stock: 0 })),
+    },
+  ]);
 
   const removeColor = (index: number) =>
     setColors(prev => prev.filter((_, i) => i !== index));
@@ -173,21 +175,16 @@ export default function AdminProductsPage() {
       isActive: product.isActive,
     });
 
-    setColors(
-      product.colors?.map(c => ({
-        name: c.name,
-        files: [],
-        sizes: STANDARD_SIZES.map(size => {
-          const found = c.sizes?.find((s: any) => s.size === size);
-          return { size, stock: found ? found.stock : 0 };
-        }),
-      })) ||
-        STANDARD_COLORS.map(c => ({
-          name: c.name,
-          files: [],
-          sizes: STANDARD_SIZES.map(s => ({ size: s, stock: 0 })),
-        }))
-    );
+  setColors(
+  product.colors?.map(c => ({
+    name: c.name,
+    files: [],
+    sizes: STANDARD_SIZES.map(size => {
+      const found = c.sizes?.find((s: any) => s.size === size);
+      return { size, stock: found ? found.stock : 0 };
+    }),
+  })) || []
+);
 
     setDialogOpen(true);
   };
@@ -309,13 +306,7 @@ export default function AdminProductsPage() {
       description: '',
       isActive: true,
     });
-    setColors(
-      STANDARD_COLORS.map(c => ({
-        name: c.name,
-        files: [],
-        sizes: STANDARD_SIZES.map(s => ({ size: s, stock: 0 })),
-      }))
-    );
+
     setEditingProduct(null);
   };
 
@@ -421,11 +412,30 @@ export default function AdminProductsPage() {
           <X size={16} />
         </button>
 
-        <Input
-          placeholder="Nom couleur"
-          value={color.name}
-          onChange={e => updateColorName(cIndex, e.target.value)}
-        />
+        <Select
+  value={color.name}
+  onValueChange={(value) => updateColorName(cIndex, value)}
+>
+  <SelectTrigger>
+    <SelectValue placeholder="Choisir couleur" />
+  </SelectTrigger>
+
+  <SelectContent>
+    {availableColors.map((c) => (
+      <SelectItem key={c.id} value={c.name}>
+        <div className="flex items-center gap-2">
+          {c.hexCode && (
+            <span
+              className="w-4 h-4 rounded-full border"
+              style={{ backgroundColor: c.hexCode }}
+            />
+          )}
+          {c.name}
+        </div>
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
 
         <Input
           type="file"
