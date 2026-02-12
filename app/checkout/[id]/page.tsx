@@ -121,6 +121,34 @@ export default function CheckoutPage() {
     fetchProduct();
     fetchZones();
   }, [productId]);
+  /* ================= META + TIKTOK – INITIATE CHECKOUT ================= */
+
+useEffect(() => {
+  if (!product) return;
+
+  // ✅ Facebook InitiateCheckout
+  if (typeof window !== 'undefined' && (window as any).fbq) {
+    (window as any).fbq('track', 'InitiateCheckout', {
+      content_name: product.name,
+      content_ids: [product.id],
+      content_type: 'product',
+      value: product.price,
+      currency: 'DZD',
+    });
+  }
+
+  // ✅ TikTok InitiateCheckout
+  if (typeof window !== 'undefined' && (window as any).ttq) {
+    (window as any).ttq.track('InitiateCheckout', {
+      content_id: product.id,
+      content_name: product.name,
+      content_type: 'product',
+      value: product.price,
+      currency: 'DZD',
+    });
+  }
+
+}, [product]);
 
   /* ================= PRELOAD IMAGES ================= */
 

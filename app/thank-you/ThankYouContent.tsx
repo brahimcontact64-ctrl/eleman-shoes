@@ -19,9 +19,11 @@ export default function ThankYouContent() {
 
   const total = totalParam ? Number(totalParam) : 0;
 
-  /* ================= META PURCHASE EVENT ================= */
+  /* ================= META + TIKTOK PURCHASE EVENT ================= */
 
   useEffect(() => {
+
+    // ✅ Facebook Purchase
     if (typeof window !== 'undefined' && (window as any).fbq && total > 0) {
       (window as any).fbq('track', 'Purchase', {
         content_type: 'product',
@@ -30,6 +32,17 @@ export default function ThankYouContent() {
         order_id: orderNumber || undefined,
       });
     }
+
+    // ✅ TikTok Purchase
+    if (typeof window !== 'undefined' && (window as any).ttq && total > 0) {
+      (window as any).ttq.track('CompletePayment', {
+        content_id: orderNumber || '',
+        content_type: 'product',
+        value: total,
+        currency: 'DZD',
+      });
+    }
+
   }, [total, orderNumber]);
 
   /* ================= UI ================= */
