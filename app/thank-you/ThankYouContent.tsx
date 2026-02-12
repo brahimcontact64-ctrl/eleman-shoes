@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -11,10 +12,27 @@ export default function ThankYouContent() {
   const router = useRouter();
 
   const orderNumber = searchParams.get('order');
+  const totalParam = searchParams.get('total');
 
-  // ✅ حماية + فك الترميز
   const rawName = searchParams.get('name');
   const fullName = rawName ? decodeURIComponent(rawName) : '';
+
+  const total = totalParam ? Number(totalParam) : 0;
+
+  /* ================= META PURCHASE EVENT ================= */
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).fbq && total > 0) {
+      (window as any).fbq('track', 'Purchase', {
+        content_type: 'product',
+        value: total,
+        currency: 'DZD',
+        order_id: orderNumber || undefined,
+      });
+    }
+  }, [total, orderNumber]);
+
+  /* ================= UI ================= */
 
   return (
     <>
@@ -24,7 +42,6 @@ export default function ThankYouContent() {
         <Card className="max-w-xl w-full shadow-xl border border-gray-200">
           <CardContent className="p-8 text-center space-y-6">
 
-            {/* ===== FR ===== */}
             <h1 className="text-2xl font-bold text-gray-900">
               Merci pour votre confiance
               {fullName && <span className="text-brown-700">, {fullName}</span>} 🤝
@@ -51,7 +68,6 @@ export default function ThankYouContent() {
 
             <hr className="my-4" />
 
-            {/* ===== AR ===== */}
             <h2 className="text-xl font-bold text-gray-900">
               شكراً على ثقتك بنا
               {fullName && <span className="text-brown-700">، {fullName}</span>} 🤍
@@ -63,20 +79,9 @@ export default function ThankYouContent() {
               يمكنك معاينة السلعة قبل الدفع عند الاستلام.
             </p>
 
-            {/* ===== BUTTON ===== */}
             <Button
               onClick={() => router.push('/')}
-              className="
-                w-full 
-                bg-[#6b3f2b] 
-                hover:bg-[#5a3323] 
-                text-white 
-                font-semibold
-                py-3
-                rounded-lg
-                shadow-md
-                transition-all
-              "
+              className="w-full bg-[#6b3f2b] hover:bg-[#5a3323] text-white font-semibold py-3 rounded-lg shadow-md transition-all"
             >
               ← Retour à l’accueil | الرجوع للرئيسية
             </Button>

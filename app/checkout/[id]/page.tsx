@@ -237,7 +237,7 @@ export default function CheckoutPage() {
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error);
 
-      router.push(`/thank-you?order=${json.orderNumber}`);
+      router.push(`/thank-you?order=${json.orderNumber}&total=${total}`);
     } catch (err: any) {
       toast.error(err.message || 'Erreur lors de la commande');
     } finally {

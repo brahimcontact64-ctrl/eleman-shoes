@@ -59,6 +59,7 @@ export default function ProductPage({ params }: ProductPageProps) {
         } as Product;
 
         setProduct(p);
+       
 
         // auto select first color (if exists)
         if (p.colors && p.colors.length > 0) {
@@ -78,7 +79,21 @@ export default function ProductPage({ params }: ProductPageProps) {
 
     fetchData();
   }, [params.slug]);
+ /* ================= META PIXEL – VIEW CONTENT ================= */
 
+useEffect(() => {
+  if (!product) return;
+
+  if (typeof window !== 'undefined' && (window as any).fbq) {
+    (window as any).fbq('track', 'ViewContent', {
+      content_name: product.name,
+      content_ids: [product.id],
+      content_type: 'product',
+      value: product.price,
+      currency: 'DZD',
+    });
+  }
+}, [product]);
   /* ================= HELPERS ================= */
 
   const selectedColor = product?.colors?.find(
@@ -255,13 +270,23 @@ export default function ProductPage({ params }: ProductPageProps) {
                 <Link
                   href={`/checkout/${product.id}?size=${selectedSize ?? ''}&color=${selectedColorId ?? ''}`}
                 >
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    disabled={!selectedSize || !selectedColorId}
-                  >
-                    {t('order')}
-                  </Button>
+                <Button
+  className="w-full"
+  size="lg"
+  disabled={!selectedSize || !selectedColorId}
+  onClick={() => {
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      (window as any).fbq('track', 'InitiateCheckout', {
+        content_name: product.name,
+        content_ids: [product.id],
+        value: product.price,
+        currency: 'DZD',
+      });
+    }
+  }}
+>
+  {t('order')}
+</Button>
                 </Link>
 
                 {(!selectedSize || !selectedColorId) && (
