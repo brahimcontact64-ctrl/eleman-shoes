@@ -125,14 +125,24 @@ const productsSnapshot = await getDocs(
         {/* ================= PRODUCTS ================= */}
         <section className="py-16">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold mb-4 text-leather-dark">
-                Produits Populaires
-              </h2>
-              <p className="text-xl text-leather-gray">
-                Découvrez nos meilleures ventes
-              </p>
-            </div>
+           <div className="text-center mb-12">
+  <h2 className="text-4xl font-bold mb-4 text-leather-dark">
+    Produits Populaires
+  </h2>
+
+  <p className="text-xl text-leather-gray mb-6">
+    Découvrez nos meilleures ventes
+  </p>
+
+  <Link href="/catalog">
+    <Button
+      variant="outline"
+      className="border-leather-brown text-leather-brown hover:bg-leather-brown hover:text-white transition-all px-6"
+    >
+      Voir tout →
+    </Button>
+  </Link>
+</div>
 
             {loading ? (
               <div className="flex justify-center py-12">
