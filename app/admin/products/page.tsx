@@ -122,7 +122,7 @@ const colorsData: AvailableColor[] = colorsSnap.docs.map((d) => ({
 
 setAvailableColors(
   colorsData
-    .filter((c) => c.isActive)
+   .filter((c) => c.isActive !== false)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 );
 
