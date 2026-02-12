@@ -12,6 +12,7 @@ import ProductCard from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Truck, Shield, Star, Zap } from 'lucide-react';
+ import { orderBy } from 'firebase/firestore';
 
 interface SiteSettings {
   heroImage: string;
@@ -53,9 +54,16 @@ export default function Home() {
       });
       setBrands(brandsMap);
 
-      const productsSnapshot = await getDocs(
-        query(collection(db, 'products'), where('isActive', '==', true), limit(8))
-      );
+     
+
+const productsSnapshot = await getDocs(
+  query(
+    collection(db, 'products'),
+    where('isActive', '==', true),
+    orderBy('createdAt', 'asc'), 
+    limit(8)
+  )
+);
 
       setProducts(
         productsSnapshot.docs.map((doc) => ({
