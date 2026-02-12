@@ -58,10 +58,10 @@ export default function Home() {
 
      
 
-// IDs تاع الكاتيجوري اللي تحبهم
+
 const categoryIds = [
   'SrgQbBADDaLSCEmo96Sn',
-  'uFLBnL1DCF7pAuqZu8c',
+  'uFLBnL1DCF7pAUgl2u8c',
 ];
 
 const categoriesSnapshot = await getDocs(
