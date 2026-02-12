@@ -31,7 +31,9 @@ const defaultSettings: SiteSettings = {
 };
 
 export default function Home() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [categoryProducts, setCategoryProducts] = useState<
+  { categoryName: string; products: Product[] }[]
+>([]);
   const [brands, setBrands] = useState<Map<string, Brand>>(new Map());
   const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
@@ -56,27 +58,53 @@ export default function Home() {
 
      
 
-const productsSnapshot = await getDocs(
+// IDs تاع الكاتيجوري اللي تحبهم
+const categoryIds = [
+  'SrgQbBADDaLSCEmo96Sn',
+  'uFLBnL1DCF7pAuqZu8c',
+];
+
+const categoriesSnapshot = await getDocs(
   query(
-    collection(db, 'products'),
-    where('isActive', '==', true),
-    orderBy('createdAt', 'asc'), 
-    limit(8)
+    collection(db, 'categories'),
+    where('__name__', 'in', categoryIds)
   )
 );
 
-      setProducts(
-        productsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Product[]
-      );
+const result: { categoryName: string; products: Product[] }[] = [];
+
+for (const catDoc of categoriesSnapshot.docs) {
+  const categoryId = catDoc.id;
+  const categoryName = catDoc.data().name;
+
+  const productsSnap = await getDocs(
+    query(
+      collection(db, 'products'),
+      where('isActive', '==', true),
+      where('categoryId', '==', categoryId),
+      limit(4)
+    )
+  );
+
+  const products = productsSnap.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Product[];
+
+  result.push({
+    categoryName,
+    products,
+  });
+}
+
+setCategoryProducts(result);
+
     } catch (error) {
       console.error(error);
     } finally {
       setLoading(false);
     }
-  };
+};
 
   return (
     <>
@@ -145,20 +173,38 @@ const productsSnapshot = await getDocs(
 </div>
 
             {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-leather-brown" />
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {products.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    brand={brands.get(product.brandId)}
-                  />
-                ))}
-              </div>
-            )}
+  <div className="flex justify-center py-12">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-leather-brown" />
+  </div>
+) : (
+  <div className="space-y-16">
+    {categoryProducts.map((section, index) => (
+      <div key={index}>
+        <h2 className="text-3xl font-bold mb-8 text-leather-dark text-center">
+          {section.categoryName}
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {section.products.map(product => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              brand={brands.get(product.brandId)}
+            />
+          ))}
+        </div>
+
+        <div className="text-center mt-8">
+          <Link href={`/catalog?category=${section.categoryName}`}>
+            <Button variant="outline">
+              Voir tout →
+            </Button>
+          </Link>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
           </div>
         </section>
 
