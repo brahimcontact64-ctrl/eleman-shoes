@@ -296,7 +296,7 @@ export interface DeliveryWilaya {
 }
 
 export interface DeliveryZone {
-  city: string;
+  
   wilaya: string;
   zone: number;
   delay: number;
@@ -372,7 +372,9 @@ export type AuditAction =
   | 'USER_ROLE_UPDATE'
   | 'USER_DISABLE'
   | 'ORDER_UPDATE'
-  | 'CUSTOMER_ORDER_CREATED';
+  | 'CUSTOMER_ORDER_CREATED'
+  | 'DELIVERY_SAVE'
+| 'DELIVERY_DELETE';
 
 export type TargetType =
   | 'product'
