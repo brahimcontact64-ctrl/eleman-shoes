@@ -235,18 +235,19 @@ export default function AdminDeliveryPage() {
             </h1>
 
             <div className="flex gap-2">
-              <Button
-                onClick={() => {
-                  const auto = autoCalculatePrices(0);
-                  setEditingZone({
-                    wilaya: '',
-                    zone: 0,
-                    delay: 1,
-                    ...auto,
-                  });
-                  setDialogOpen(true);
-                }}
-              >
+            <Button
+  onClick={() => {
+    const auto = autoCalculatePrices(0);
+    setEditingZone({
+      city: '',          // 👈 أضف هذا
+      wilaya: '',
+      zone: 0,
+      delay: 1,
+      ...auto,
+    });
+    setDialogOpen(true);
+  }}
+>
                 <Plus className="mr-2 h-4 w-4" />
                 Ajouter
               </Button>
