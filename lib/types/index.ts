@@ -296,7 +296,7 @@ export interface DeliveryWilaya {
 }
 
 export interface DeliveryZone {
-  
+  city: string;
   wilaya: string;
   zone: number;
   delay: number;
