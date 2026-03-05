@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import PromoBanner from '@/components/PromoBanner';
 import { useParams, useRouter } from 'next/navigation';
 import {
   doc,
@@ -299,7 +300,8 @@ if (!promoSnap.empty) {
   return (
     <>
       <Navbar />
-
+      <PromoBanner />
+    
       <main className="min-h-screen bg-leather-beige py-8">
         <div className="container mx-auto px-4">
           <form
@@ -369,12 +371,19 @@ if (!promoSnap.empty) {
                   <CardTitle>Produit</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div
-                    className="aspect-square bg-white border rounded flex items-center justify-center cursor-zoom-in"
-                    onClick={() => setZoomOpen(true)}
-                  >
-                    <img src={displayImage} className="object-contain max-h-full" />
-                  </div>
+                 <div
+  className="relative aspect-square bg-white border rounded flex items-center justify-center cursor-zoom-in overflow-hidden"
+  onClick={() => setZoomOpen(true)}
+>
+  {/* PROMO BADGE */}
+  {promotion?.discount && (
+    <div className="absolute top-3 left-3 z-10 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+      {promotion.discount} DA OFF
+    </div>
+  )}
+
+  <img src={displayImage} className="object-contain max-h-full" />
+</div>
 
                   {colorImages.length > 1 && (
                     <div className="flex gap-2 overflow-x-auto">

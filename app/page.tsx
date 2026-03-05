@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase/config';
 import { Product, Brand } from '@/lib/types';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import PromoBanner from '@/components/PromoBanner';
 import Footer from '@/components/Footer';
 import WhatsAppButton from '@/components/WhatsAppButton';
 import ProductCard from '@/components/ProductCard';
@@ -108,9 +109,11 @@ setCategoryProducts(result);
 
   return (
     <>
-      <Navbar />
+  <Navbar />
 
-      <main className="bg-leather-beige">
+  <PromoBanner />
+
+  <main className="bg-leather-beige">
 
         {/* ================= HERO (FIXED FINAL) ================= */}
         <section className="relative w-full h-[100svh] md:h-[700px]">
@@ -171,6 +174,7 @@ setCategoryProducts(result);
     </Button>
   </Link>
 </div>
+<PromoBanner />
 
             {loading ? (
   <div className="flex justify-center py-12">

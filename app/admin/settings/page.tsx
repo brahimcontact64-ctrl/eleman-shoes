@@ -20,6 +20,12 @@ interface SiteSettings {
   heroCtaText: string;
   whatsappNumber: string;
   logoUrl: string;
+  promotion: {
+  enabled: boolean;
+  title: string;
+  subtitle: string;
+  endAt: string; 
+};
   colors: {
     leatherBrown: string;
     leatherLight: string;
@@ -76,6 +82,12 @@ const defaultSettings: SiteSettings = {
     tiktok: '',
     linkedin: '',
   },
+  promotion: {
+  enabled: false,
+  title: '',
+  subtitle: '',
+  endAt: '', 
+},
   googleSheets: {
     enabled: false,
     spreadsheetId: '',
@@ -155,6 +167,7 @@ export default function SettingsPage() {
           <Tabs defaultValue="hero" className="space-y-4">
             <TabsList className="bg-white">
               <TabsTrigger value="hero">Hero Section</TabsTrigger>
+              <TabsTrigger value="promotion">Promotions</TabsTrigger>
               <TabsTrigger value="colors">Couleurs</TabsTrigger>
               <TabsTrigger value="contact">Contact</TabsTrigger>
               <TabsTrigger value="company">Entreprise</TabsTrigger>
@@ -217,6 +230,97 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             </TabsContent>
+            <TabsContent value="promotion">
+  <Card>
+    <CardHeader>
+      <CardTitle>Promotions / Countdown</CardTitle>
+      <CardDescription>تحكم في بانر التخفيضات و العد التنازلي</CardDescription>
+    </CardHeader>
+
+    <CardContent className="space-y-4">
+      <div className="flex items-center justify-between p-4 border rounded-lg bg-leather-beige/30">
+        <div>
+          <Label className="text-base font-semibold">تفعيل التخفيضات</Label>
+          <p className="text-sm text-leather-gray mt-1">
+            إذا كانت مفعلة سيظهر بانر التخفيضات في الموقع
+          </p>
+        </div>
+
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={settings.promotion?.enabled ?? false}
+            onChange={(e) =>
+              setSettings({
+                ...settings,
+                promotion: {
+                  ...(settings.promotion || defaultSettings.promotion),
+                  enabled: e.target.checked,
+                },
+              })
+            }
+            className="sr-only peer"
+          />
+          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-leather-light/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-leather-brown"></div>
+        </label>
+      </div>
+
+      <div>
+        <Label>Titre</Label>
+        <Input
+          value={settings.promotion?.title ?? ''}
+          onChange={(e) =>
+            setSettings({
+              ...settings,
+              promotion: {
+                ...(settings.promotion || defaultSettings.promotion),
+                title: e.target.value,
+              },
+            })
+          }
+          placeholder="🔥 Promo Ramadan"
+        />
+      </div>
+
+      <div>
+        <Label>Sous-titre</Label>
+        <Input
+          value={settings.promotion?.subtitle ?? ''}
+          onChange={(e) =>
+            setSettings({
+              ...settings,
+              promotion: {
+                ...(settings.promotion || defaultSettings.promotion),
+                subtitle: e.target.value,
+              },
+            })
+          }
+          placeholder="حتى -40% على موديلات مختارة"
+        />
+      </div>
+
+      <div>
+        <Label>Date fin (Countdown)</Label>
+        <Input
+          type="datetime-local"
+          value={(settings.promotion?.endAt ?? '').slice(0, 16)}
+          onChange={(e) =>
+            setSettings({
+              ...settings,
+              promotion: {
+                ...(settings.promotion || defaultSettings.promotion),
+                endAt: e.target.value,
+              },
+            })
+          }
+        />
+        <p className="text-xs text-leather-gray mt-1">
+          إذا كانت فارغة، ما يبانش العد التنازلي.
+        </p>
+      </div>
+    </CardContent>
+  </Card>
+</TabsContent>
 
             <TabsContent value="colors">
               <Card>
