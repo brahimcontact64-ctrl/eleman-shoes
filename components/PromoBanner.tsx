@@ -66,7 +66,7 @@ export default function PromoBanner() {
   <div className="w-full py-3">
     <div className="container mx-auto px-4">
 
-      <div className="bg-leather-brown/90 text-white py-3 px-5 rounded-2xl shadow-sm
+      <div className="bg-leather-brown shadow-lg/90 text-white py-3 px-5 rounded-2xl shadow-sm
                       flex flex-col md:flex-row items-center justify-between gap-4">
 
         <div>
@@ -81,17 +81,22 @@ export default function PromoBanner() {
           )}
         </div>
 
-        {timeLeft && (
-          <div className="flex gap-3 text-center">
+       {timeLeft && (
+  <div className="flex flex-col items-center gap-2">
 
-            <TimeBox value={timeLeft.days} label="J" />
-            <TimeBox value={timeLeft.hours} label="H" />
-            <TimeBox value={timeLeft.minutes} label="M" />
-            <TimeBox value={timeLeft.seconds} label="S" />
+    <div className="flex gap-3 text-center">
+      <TimeBox value={timeLeft.days} label="J" />
+      <TimeBox value={timeLeft.hours} label="H" />
+      <TimeBox value={timeLeft.minutes} label="M" />
+      <TimeBox value={timeLeft.seconds} label="S" />
+    </div>
 
-          </div>
-        )}
+    <p className="text-xs opacity-80">
+      ⚡ Offre limitée pendant Ramadan
+    </p>
 
+  </div>
+)}
       </div>
 
     </div>
@@ -101,7 +106,7 @@ export default function PromoBanner() {
 
 function TimeBox({ value, label }: { value: number; label: string }) {
   return (
-    <div className="bg-white text-leather-dark px-3 py-2 rounded-lg min-w-[60px]">
+    <div className="bg-white text-leather-dark px-2 py-2 rounded-lg min-w-[52px]">
       <div className="text-lg font-bold">
         {String(value).padStart(2, '0')}
       </div>
