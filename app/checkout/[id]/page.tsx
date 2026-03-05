@@ -47,6 +47,7 @@ export default function CheckoutPage() {
   /* ================= STATE ================= */
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [promotion, setPromotion] = useState<any | null>(null);
   const [brand, setBrand] = useState<Brand | null>(null);
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [related, setRelated] = useState<Product[]>([]);
@@ -109,8 +110,10 @@ export default function CheckoutPage() {
       .map((s: any) => s.size);
   }, [selectedColor]);
 
-  const total =
-    product ? product.price * quantity + deliveryPrice : 0;
+ const unitPrice = promotion ? promotion.newPrice : product?.price || 0;
+
+const total =
+  product ? unitPrice * quantity + deliveryPrice : 0;
 
   const isOutOfStock =
     !selectedSize || remainingStock <= 0 || quantity > remainingStock;
@@ -132,7 +135,7 @@ useEffect(() => {
       content_name: product.name,
       content_ids: [product.id],
       content_type: 'product',
-      value: product.price,
+      value: promotion ? promotion.newPrice : product.price,
       currency: 'DZD',
     });
   }
@@ -173,6 +176,22 @@ useEffect(() => {
 
       const data = { id: snap.id, ...snap.data() } as Product;
       setProduct(data);
+      // fetch promotion
+const promoQuery = query(
+  collection(db, 'promotions'),
+  where('productId', '==', data.id),
+  where('active', '==', true),
+  limit(1)
+);
+
+const promoSnap = await getDocs(promoQuery);
+
+if (!promoSnap.empty) {
+  setPromotion({
+    id: promoSnap.docs[0].id,
+    ...promoSnap.docs[0].data(),
+  });
+}
 
       setSelectedColorId(data.colors?.[0]?.colorId || '');
 
@@ -231,7 +250,7 @@ useEffect(() => {
           name: product!.name,
           brandId: product!.brandId,
           brandName: brand?.name || '',
-          price: product!.price,
+         price: promotion ? promotion.newPrice : product!.price,
           image: displayImage,
         },
         variant: {

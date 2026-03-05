@@ -339,7 +339,26 @@ export interface SiteSettings {
     sheetName: string;
   };
 }
+/* =========================
+   PROMOTIONS
+========================= */
 
+export interface Promotion {
+  id: string;
+
+  productId: string;
+
+  oldPrice: number;
+  newPrice: number;
+  discount: number;
+
+  active: boolean;
+
+  startDate?: Timestamp;
+  endDate?: Timestamp;
+
+  createdAt?: Timestamp;
+}
 /* =========================
    AUDIT LOGS
 ========================= */

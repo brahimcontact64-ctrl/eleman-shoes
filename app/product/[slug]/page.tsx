@@ -34,6 +34,7 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [product, setProduct] = useState<Product | null>(null);
   const [brand, setBrand] = useState<Brand | null>(null);
   const [loading, setLoading] = useState(true);
+  const [promotion, setPromotion] = useState<any | null>(null);
 
   const [selectedColorId, setSelectedColorId] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<number | null>(null);
@@ -59,6 +60,21 @@ export default function ProductPage({ params }: ProductPageProps) {
         } as Product;
 
         setProduct(p);
+        // fetch promotion for this product
+const promoSnap = await getDocs(
+  query(
+    collection(db, 'promotions'),
+    where('productId', '==', p.id),
+    where('active', '==', true)
+  )
+);
+
+if (!promoSnap.empty) {
+  setPromotion({
+    id: promoSnap.docs[0].id,
+    ...promoSnap.docs[0].data(),
+  });
+}
        
 
         // auto select first color (if exists)
@@ -219,10 +235,29 @@ useEffect(() => {
 
               <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
 
-              <p className="text-4xl font-bold mb-6">
-                {formatPrice(product.price)}
-              </p>
+            <div className="mb-6">
 
+  {promotion && (
+    <Badge className="bg-red-500 text-white mb-2">
+      DA {promotion.discount} OFF
+    </Badge>
+  )}
+
+  <p className="text-4xl font-bold">
+
+    {promotion
+      ? formatPrice(promotion.newPrice)
+      : formatPrice(product.price)}
+
+  </p>
+
+  {promotion && (
+    <p className="text-lg text-gray-400 line-through">
+      {formatPrice(promotion.oldPrice)}
+    </p>
+  )}
+
+</div>
               {/* SIZES */}
             {product.sizes && product.sizes.length > 0 && (
                 <div className="mb-6">
