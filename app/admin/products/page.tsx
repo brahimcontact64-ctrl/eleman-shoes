@@ -62,6 +62,7 @@ type SizeStock = {
 type ColorForm = {
   name: string;
   files: File[];
+  existingImages?: { url: string }[];
   sizes: SizeStock[];
 };
 type AvailableColor = {
@@ -174,11 +175,11 @@ const addColor = () =>
       description: product.description || '',
       isActive: product.isActive,
     });
-
-  setColors(
+setColors(
   product.colors?.map(c => ({
     name: c.name,
     files: [],
+    existingImages: c.images || [],
     sizes: STANDARD_SIZES.map(size => {
       const found = c.sizes?.find((s: any) => s.size === size);
       return { size, stock: found ? found.stock : 0 };
@@ -207,94 +208,110 @@ const addColor = () =>
   };
 
   /* ================= SUBMIT ================= */
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!user) return;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
+  if (!formData.brandId || !formData.categoryId) {
+    toast({
+      title: 'Champs manquants',
+      description: 'Veuillez sélectionner une marque et une catégorie',
+      variant: 'destructive',
+    });
+    return;
+  }
 
-    if (!formData.brandId || !formData.categoryId) {
-      toast({
-        title: 'Champs manquants',
-        description: 'Veuillez sélectionner une marque et une catégorie',
-        variant: 'destructive',
-      });
-      return;
-    }
+  try {
+    const slug = generateSlug(formData.name);
+    const colorsData: any[] = [];
 
-    try {
-      const slug = generateSlug(formData.name);
-      const colorsData: any[] = [];
+    for (const color of colors) {
+      if (!color.name) continue;
 
-      for (const color of colors) {
-        if (!color.name) continue;
+      /* ===== الصور ===== */
 
-        const imageUrls = await Promise.all(
-          color.files.map(async file => {
+      let imageUrls: string[] = [];
+
+      // الصور القديمة (عند التعديل)
+      if ((color as any).existingImages?.length) {
+        imageUrls = (color as any).existingImages.map((img: any) => img.url);
+      }
+
+      // الصور الجديدة
+      if (color.files.length > 0) {
+        const uploaded = await Promise.all(
+          color.files.map(async (file) => {
             const storageRef = ref(
               storage,
               `products/${slug}/${color.name}/${Date.now()}_${file.name}`
             );
+
             await uploadBytes(storageRef, file);
             return await getDownloadURL(storageRef);
           })
         );
 
-        const validSizes = color.sizes.filter(s => s.stock > 0);
-
-        if (imageUrls.length === 0 || validSizes.length === 0) continue;
-
-        colorsData.push({
-          colorId: generateSlug(color.name),
-          name: color.name,
-          images: imageUrls.map(url => ({ url })),
-          sizes: validSizes,
-        });
+        imageUrls = [...imageUrls, ...uploaded];
       }
 
-      if (colorsData.length === 0) {
-        toast({
-          title: 'Produit invalide',
-          description: 'Ajoutez au moins une couleur avec image et stock',
-          variant: 'destructive',
-        });
-        return;
-      }
+      /* ===== STOCK ===== */
 
-      const payload = {
-        name: formData.name,
-        slug,
-        brandId: formData.brandId,
-        categoryId: formData.categoryId,
-        price: Number(formData.price),
-        description: formData.description,
-        colors: colorsData,
-        isActive: formData.isActive,
-        updatedAt: serverTimestamp(),
-      };
+      const validSizes = color.sizes.filter((s) => s.stock > 0);
 
-      if (editingProduct) {
-        await updateDoc(doc(db, 'products', editingProduct.id), payload);
-      } else {
-        await addDoc(collection(db, 'products'), {
-          ...payload,
-          createdAt: serverTimestamp(),
-        });
-      }
+      if (validSizes.length === 0) continue;
 
-      toast({ title: 'Succès', description: 'Produit enregistré' });
-      setDialogOpen(false);
-      resetForm();
-      fetchData();
-    } catch (err) {
-      console.error(err);
-      toast({
-        title: 'Erreur',
-        description: 'Erreur lors de la sauvegarde',
-        variant: 'destructive',
+      colorsData.push({
+        colorId: generateSlug(color.name),
+        name: color.name,
+        images: imageUrls.map((url) => ({ url })),
+        sizes: validSizes,
       });
     }
-  };
 
+    if (colorsData.length === 0) {
+      toast({
+        title: 'Produit invalide',
+        description: 'Ajoutez au moins une couleur avec image et stock',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const payload = {
+      name: formData.name,
+      slug,
+      brandId: formData.brandId,
+      categoryId: formData.categoryId,
+      price: Number(formData.price),
+      description: formData.description,
+      colors: colorsData,
+      isActive: formData.isActive,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (editingProduct) {
+      await updateDoc(doc(db, 'products', editingProduct.id), payload);
+    } else {
+      await addDoc(collection(db, 'products'), {
+        ...payload,
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    toast({ title: 'Succès', description: 'Produit enregistré' });
+
+    setDialogOpen(false);
+    resetForm();
+    fetchData();
+  } catch (err) {
+    console.error(err);
+    toast({
+      title: 'Erreur',
+      description: 'Erreur lors de la sauvegarde',
+      variant: 'destructive',
+    });
+  }
+};
   /* ================= RESET ================= */
 
   const resetForm = () => {
@@ -445,6 +462,31 @@ const addColor = () =>
             updateColorFiles(cIndex, Array.from(e.target.files || []))
           }
         />
+        {color.existingImages && color.existingImages.length > 0 && (
+  <div className="flex flex-wrap gap-2 mt-2">
+    {color.existingImages.map((img, i) => (
+      <div key={i} className="relative">
+        <img
+          src={img.url}
+          className="w-20 h-20 object-cover rounded border"
+        />
+
+        <button
+          type="button"
+          onClick={() => {
+            const updated = [...colors];
+            updated[cIndex].existingImages =
+              updated[cIndex].existingImages?.filter((_, index) => index !== i);
+            setColors(updated);
+          }}
+          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full px-1 text-xs"
+        >
+          ✕
+        </button>
+      </div>
+    ))}
+  </div>
+)}
 
         <div className="grid grid-cols-5 gap-2 mt-2">
           {color.sizes.map((s, sIndex) => (
