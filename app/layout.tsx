@@ -163,7 +163,7 @@ if (!window.__META_PIXEL_INITIALIZED__) {
             height="1"
             width="1"
             style={{ display: 'none' }}
-            src="https://www.facebook.com/tr?id=2442446146189252&ev=PageView&noscript=1"
+           src="https://www.facebook.com/tr?id=2657224451323629&ev=PageView&noscript=1"
             alt=""
           />
         </noscript>
