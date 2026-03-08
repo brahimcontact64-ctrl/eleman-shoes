@@ -23,13 +23,14 @@ import { db } from '@/lib/firebase/config';
 interface ProductCardProps {
   product: Product;
   brand?: Brand;
+  promotion?: any;
 }
-
 export default function ProductCard({ product, brand }: ProductCardProps) {
 
   const { t } = useLanguage();
 
   const [promotion, setPromotion] = useState<any | null>(null);
+  const [hovered, setHovered] = useState(false);
   const [colorsMap, setColorsMap] = useState<any>({});
   const [selectedColorId, setSelectedColorId] = useState(
     product.colors?.[0]?.colorId || null
@@ -37,27 +38,6 @@ export default function ProductCard({ product, brand }: ProductCardProps) {
 
   /* ================= FETCH PROMOTION ================= */
 
-  useEffect(() => {
-    const fetchPromotion = async () => {
-      const q = query(
-        collection(db, 'promotions'),
-        where('productId', '==', product.id),
-        where('active', '==', true),
-        limit(1)
-      );
-
-      const snap = await getDocs(q);
-
-      if (!snap.empty) {
-        setPromotion({
-          id: snap.docs[0].id,
-          ...snap.docs[0].data(),
-        });
-      }
-    };
-
-    fetchPromotion();
-  }, [product.id]);
 
   /* ================= FETCH COLORS ================= */
 
@@ -85,8 +65,10 @@ export default function ProductCard({ product, brand }: ProductCardProps) {
     product.colors?.find(c => c.colorId === selectedColorId) ||
     product.colors?.[0];
 
-  const mainImage =
-    activeColor?.images?.[0]?.url || null;
+const firstImage = activeColor?.images?.[0]?.url || null;
+const secondImage = activeColor?.images?.[1]?.url || null;
+
+const mainImage = hovered && secondImage ? secondImage : firstImage;
 
   /* ================= PRICE ================= */
 
@@ -115,7 +97,13 @@ export default function ProductCard({ product, brand }: ProductCardProps) {
       {/* IMAGE */}
 
       <Link href={'/product/' + product.slug}>
-        <div className="relative h-64 bg-leather-beige flex items-center justify-center overflow-hidden">
+       <div
+  className="relative h-64 bg-leather-beige flex items-center justify-center"
+  onMouseEnter={() => setHovered(true)}
+  onMouseLeave={() => setHovered(false)}
+  onTouchStart={() => setHovered(true)}
+  onTouchEnd={() => setHovered(false)}
+>
 
           {promotion && (
             <div className="absolute top-3 left-3 z-10">
@@ -134,7 +122,7 @@ export default function ProductCard({ product, brand }: ProductCardProps) {
   loading="lazy"
   quality={40}
   priority={false}
-  className="object-cover"
+ className="object-cover transition-all duration-300"
 />
           ) : (
             <span className="text-sm text-gray-400">

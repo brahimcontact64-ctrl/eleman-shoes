@@ -38,10 +38,33 @@ export default function Home() {
   const [brands, setBrands] = useState<Map<string, Brand>>(new Map());
   const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
-
+const [promotions, setPromotions] = useState<Record<string, any> | null>(null)
   useEffect(() => {
     fetchData();
   }, []);
+  useEffect(() => {
+  const fetchPromotions = async () => {
+
+    const snap = await getDocs(
+      query(
+        collection(db, "promotions"),
+        where("active", "==", true)
+      )
+    )
+
+    const map:any = {}
+
+    snap.forEach(doc => {
+      const data = doc.data()
+      map[data.productId] = data
+    })
+
+    setPromotions(map)
+
+  }
+
+  fetchPromotions()
+}, [])
 
   const fetchData = async () => {
     try {
@@ -190,12 +213,13 @@ setCategoryProducts(result);
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {section.products.map(product => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              brand={brands.get(product.brandId)}
-            />
-          ))}
+  <ProductCard
+    key={product.id}
+    product={product}
+    brand={brands.get(product.brandId)}
+   promotion={promotions?.[product.id]}
+  />
+))}
         </div>
 
         <div className="text-center mt-8">
