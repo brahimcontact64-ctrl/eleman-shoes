@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import ProductCardSkeleton from '@/components/ProductCardSkeleton'
 import { useEffect, useState } from 'react';
 import {
   collection,
@@ -19,7 +20,11 @@ import Navbar from '@/components/Navbar';
 import PromoBanner from '@/components/PromoBanner';
 import Footer from '@/components/Footer';
 import WhatsAppButton from '@/components/WhatsAppButton';
-import ProductCard from '@/components/ProductCard';
+const ProductCard = dynamic(
+  () => import('@/components/ProductCard'),
+  { ssr: false }
+)
+import dynamic from 'next/dynamic'
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -228,11 +233,17 @@ export default function Home() {
               </Link>
             </div>
 
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-leather-brown" />
-              </div>
-            ) : (
+           {loading ? (
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+    {Array.from({ length: 8 }).map((_, i) => (
+      <ProductCardSkeleton key={i} />
+    ))}
+
+  </div>
+
+) : (
               <div className="space-y-16">
                 {categoryProducts.map((section, index) => (
                   <div key={index}>

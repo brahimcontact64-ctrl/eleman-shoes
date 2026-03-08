@@ -103,7 +103,8 @@ export default function ProductCard({
 
             {firstImage && (
               <Image
-                src={firstImage}
+  src={firstImage}
+  priority={false}
                 alt={product.name}
                 fill
                 sizes="(max-width:768px) 100vw, 25vw"
