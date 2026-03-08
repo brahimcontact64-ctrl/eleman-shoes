@@ -1,6 +1,6 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'
 import {
   collection,
   query,
@@ -8,179 +8,243 @@ import {
   getDocs,
   doc,
   getDoc,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { Product, Brand } from '@/lib/types';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import WhatsAppButton from '@/components/WhatsAppButton';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { formatPrice } from '@/lib/firebase/utils';
-import { MessageCircle } from 'lucide-react';
-import Link from 'next/link';
-import Image from 'next/image';
+  limit
+} from 'firebase/firestore'
+
+import { db } from '@/lib/firebase/config'
+import { Product, Brand } from '@/lib/types'
+
+import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
+import WhatsAppButton from '@/components/WhatsAppButton'
+
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+
+import { useLanguage } from '@/contexts/LanguageContext'
+import { formatPrice } from '@/lib/firebase/utils'
+
+import { MessageCircle } from 'lucide-react'
+import Link from 'next/link'
+import Image from 'next/image'
 
 interface ProductPageProps {
   params: {
-    slug: string;
-  };
+    slug: string
+  }
 }
 
 export default function ProductPage({ params }: ProductPageProps) {
-  const { t } = useLanguage();
 
-  const [product, setProduct] = useState<Product | null>(null);
-  const [brand, setBrand] = useState<Brand | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [promotion, setPromotion] = useState<any | null>(null);
+  const { t } = useLanguage()
 
-  const [selectedColorId, setSelectedColorId] = useState<string | null>(null);
-  const [selectedSize, setSelectedSize] = useState<number | null>(null);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [product,setProduct] = useState<Product | null>(null)
+  const [brand,setBrand] = useState<Brand | null>(null)
+  const [promotion,setPromotion] = useState<any | null>(null)
 
-  /* ================= FETCH ================= */
+  const [loading,setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const q = query(
-          collection(db, 'products'),
-          where('slug', '==', params.slug),
-          where('isActive', '==', true)
-        );
+  const [selectedColorId,setSelectedColorId] = useState<string | null>(null)
+  const [selectedSize,setSelectedSize] = useState<number | null>(null)
+  const [selectedImageIndex,setSelectedImageIndex] = useState(0)
 
-        const snap = await getDocs(q);
-        if (snap.empty) return;
+  /* ================= FETCH DATA ================= */
+
+  useEffect(()=>{
+
+    const fetchData = async()=>{
+
+      try{
+
+        /* PRODUCT */
+
+        const productSnap = await getDocs(
+          query(
+            collection(db,'products'),
+            where('slug','==',params.slug),
+            where('isActive','==',true),
+            limit(1)
+          )
+        )
+
+        if(productSnap.empty){
+          setLoading(false)
+          return
+        }
 
         const p = {
-          id: snap.docs[0].id,
-          ...snap.docs[0].data(),
-        } as Product;
+          id: productSnap.docs[0].id,
+          ...productSnap.docs[0].data()
+        } as Product
 
-        setProduct(p);
-        // fetch promotion for this product
-const promoSnap = await getDocs(
-  query(
-    collection(db, 'promotions'),
-    where('productId', '==', p.id),
-    where('active', '==', true)
-  )
-);
+        setProduct(p)
 
-if (!promoSnap.empty) {
-  setPromotion({
-    id: promoSnap.docs[0].id,
-    ...promoSnap.docs[0].data(),
-  });
-}
-       
+        /* PROMOTION */
 
-        // auto select first color (if exists)
-        if (p.colors && p.colors.length > 0) {
-          setSelectedColorId(p.colors[0].colorId);
+        const promoSnap = await getDocs(
+          query(
+            collection(db,'promotions'),
+            where('productId','==',p.id),
+            where('active','==',true),
+            limit(1)
+          )
+        )
+
+        if(!promoSnap.empty){
+          setPromotion({
+            id: promoSnap.docs[0].id,
+            ...promoSnap.docs[0].data()
+          })
         }
 
-        const brandSnap = await getDoc(doc(db, 'brands', p.brandId));
-        if (brandSnap.exists()) {
-          setBrand({ id: brandSnap.id, ...brandSnap.data() } as Brand);
+        /* BRAND */
+
+        const brandSnap = await getDoc(doc(db,'brands',p.brandId))
+
+        if(brandSnap.exists()){
+          setBrand({
+            id: brandSnap.id,
+            ...brandSnap.data()
+          } as Brand)
         }
-      } catch (e) {
-        console.error('Product fetch error:', e);
-      } finally {
-        setLoading(false);
+
+        /* DEFAULT COLOR */
+
+        if(p.colors && p.colors.length>0){
+          setSelectedColorId(p.colors[0].colorId)
+        }
+
+      }catch(err){
+        console.error('Product fetch error:',err)
+      }finally{
+        setLoading(false)
       }
-    };
 
-    fetchData();
-  }, [params.slug]);
- /* ================= META + TIKTOK – VIEW CONTENT ================= */
+    }
 
-useEffect(() => {
-  if (!product) return;
+    fetchData()
 
-  // ✅ Facebook
-  if (typeof window !== 'undefined' && (window as any).fbq) {
-    (window as any).fbq('track', 'ViewContent', {
-      content_name: product.name,
-      content_ids: [product.id],
-      content_type: 'product',
-      value: product.price,
-      currency: 'DZD',
-    });
-  }
+  },[params.slug])
 
-  // ✅ TikTok
-  if (typeof window !== 'undefined' && (window as any).ttq) {
-    (window as any).ttq.track('ViewContent', {
-      content_id: product.id,
-      content_name: product.name,
-      content_type: 'product',
-      value: product.price,
-      currency: 'DZD',
-    });
-  }
+  /* ================= PIXEL TRACKING ================= */
 
-}, [product]);
+  useEffect(()=>{
+
+    if(!product) return
+
+    if(typeof window !== 'undefined' && (window as any).fbq){
+
+      ;(window as any).fbq('track','ViewContent',{
+        content_name: product.name,
+        content_ids: [product.id],
+        content_type:'product',
+        value: product.price,
+        currency:'DZD'
+      })
+
+    }
+
+    if(typeof window !== 'undefined' && (window as any).ttq){
+
+      ;(window as any).ttq.track('ViewContent',{
+        content_id: product.id,
+        content_name: product.name,
+        content_type:'product',
+        value: product.price,
+        currency:'DZD'
+      })
+
+    }
+
+  },[product])
+
   /* ================= HELPERS ================= */
 
   const selectedColor = product?.colors?.find(
-    c => c.colorId === selectedColorId
-  );
+    c=>c.colorId === selectedColorId
+  )
 
   const images =
-    selectedColor?.images?.map(img => img.url) ||
+    selectedColor?.images?.map(img=>img.url) ||
     product?.images ||
-    [];
+    []
 
-  const handleWhatsAppOrder = () => {
-    if (!product) return;
+  const finalPrice =
+    promotion?.newPrice ?? product?.price
+
+  const handleWhatsAppOrder = ()=>{
+
+    if(!product) return
 
     const msg =
       `Bonjour, je suis intéressé par ce produit:\n` +
       `${product.name}\n` +
-      `Prix: ${formatPrice(product.price)}\n` +
+      `Prix: ${formatPrice(finalPrice)}\n` +
       (selectedSize ? `Pointure: ${selectedSize}\n` : '') +
-      (selectedColor ? `Couleur: ${selectedColor.name}` : '');
+      (selectedColor ? `Couleur: ${selectedColor.name}` : '')
 
     window.open(
-      'https://wa.me/?text=' + encodeURIComponent(msg),
+      'https://wa.me/?text='+encodeURIComponent(msg),
       '_blank'
-    );
-  };
+    )
 
-  /* ================= UI ================= */
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
-      </div>
-    );
   }
 
-  if (!product) {
-    return (
+  /* ================= LOADING ================= */
+
+  if(loading){
+
+    return(
+
+      <div className="flex items-center justify-center min-h-screen">
+
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"/>
+
+      </div>
+
+    )
+
+  }
+
+  /* ================= NOT FOUND ================= */
+
+  if(!product){
+
+    return(
+
       <>
-        <Navbar />
+        <Navbar/>
+
         <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl font-bold mb-4">Produit introuvable</h1>
+
+          <h1 className="text-2xl font-bold mb-4">
+            Produit introuvable
+          </h1>
+
           <Link href="/catalog">
             <Button>Retour au catalogue</Button>
           </Link>
+
         </div>
-        <Footer />
+
+        <Footer/>
       </>
-    );
+
+    )
+
   }
 
-  return (
+  /* ================= UI ================= */
+
+  return(
+
     <>
-      <Navbar />
+      <Navbar/>
 
       <main className="min-h-screen bg-gray-50">
+
         <div className="container mx-auto px-4 py-8">
+
           <Link
             href="/catalog"
             className="text-gray-600 hover:text-gray-900 mb-4 inline-block"
@@ -189,159 +253,213 @@ useEffect(() => {
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white rounded-lg shadow-md p-6">
-            {/* ================= IMAGES ================= */}
+
+            {/* IMAGES */}
+
             <div>
+
               <div className="relative h-96 bg-gray-100 rounded-lg mb-4">
-                {images[selectedImageIndex] && (
+
+                {images[selectedImageIndex] &&(
+
                   <Image
                     src={images[selectedImageIndex]}
                     alt={product.name}
                     fill
+                    sizes="(max-width:768px) 100vw, 50vw"
+                    quality={60}
                     className="object-cover rounded-lg"
                   />
+
                 )}
+
               </div>
 
-              {images.length > 1 && (
+              {images.length>1 &&(
+
                 <div className="grid grid-cols-4 gap-2">
-                  {images.map((img, i) => (
+
+                  {images.map((img,i)=>(
+
                     <div
                       key={i}
-                      onClick={() => setSelectedImageIndex(i)}
+                      onClick={()=>setSelectedImageIndex(i)}
                       className={`relative h-24 cursor-pointer rounded border-2 ${
                         selectedImageIndex === i
                           ? 'border-gray-900'
                           : 'border-transparent'
                       }`}
                     >
+
                       <Image
                         src={img}
-                        alt={`Image ${i + 1}`}
+                        alt={`Image ${i+1}`}
                         fill
+                        sizes="100px"
+                        quality={50}
                         className="object-cover rounded"
                       />
+
                     </div>
+
                   ))}
+
                 </div>
+
               )}
+
             </div>
 
-            {/* ================= INFO ================= */}
+            {/* INFO */}
+
             <div>
+
               <div className="flex gap-2 mb-2">
+
                 {brand && <Badge>{brand.name}</Badge>}
-                <Badge variant="outline">{t('available')}</Badge>
+
+                <Badge variant="outline">
+                  {t('available')}
+                </Badge>
+
               </div>
 
-              <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
+              <h1 className="text-3xl font-bold mb-4">
+                {product.name}
+              </h1>
 
-            <div className="mb-6">
+              <div className="mb-6">
 
-  {promotion && (
-    <Badge className="bg-red-500 text-white mb-2">
-      DA {promotion.discount} OFF
-    </Badge>
-  )}
+                {promotion &&(
 
-  <p className="text-4xl font-bold">
+                  <Badge className="bg-red-500 text-white mb-2">
+                    DA {promotion.discount} OFF
+                  </Badge>
 
-    {promotion
-      ? formatPrice(promotion.newPrice)
-      : formatPrice(product.price)}
+                )}
 
-  </p>
+                <p className="text-4xl font-bold">
 
-  {promotion && (
-    <p className="text-lg text-gray-400 line-through">
-      {formatPrice(promotion.oldPrice)}
-    </p>
-  )}
+                  {formatPrice(finalPrice)}
 
-</div>
+                </p>
+
+                {promotion &&(
+
+                  <p className="text-lg text-gray-400 line-through">
+                    {formatPrice(promotion.oldPrice)}
+                  </p>
+
+                )}
+
+              </div>
+
               {/* SIZES */}
-            {product.sizes && product.sizes.length > 0 && (
+
+              {product.sizes?.length>0 &&(
+
                 <div className="mb-6">
-                  <h3 className="font-semibold mb-2">{t('sizes')}</h3>
+
+                  <h3 className="font-semibold mb-2">
+                    {t('sizes')}
+                  </h3>
+
                   <div className="flex flex-wrap gap-2">
-                   {(product.sizes ?? []).map(size => (
+
+                    {product.sizes.map(size=>(
+
                       <button
                         key={size}
-                        onClick={() => setSelectedSize(size)}
+                        onClick={()=>setSelectedSize(size)}
                         className={`px-4 py-2 rounded-lg border-2 ${
-                          selectedSize === size
-                            ? 'bg-gray-900 text-white border-gray-900'
-                            : 'border-gray-300'
+                          selectedSize===size
+                          ? 'bg-gray-900 text-white border-gray-900'
+                          : 'border-gray-300'
                         }`}
                       >
                         {size}
                       </button>
+
                     ))}
+
                   </div>
+
                 </div>
+
               )}
 
               {/* COLORS */}
-              {product.colors?.length > 0 && (
+
+              {product.colors?.length>0 &&(
+
                 <div className="mb-6">
-                  <h3 className="font-semibold mb-2">Couleurs</h3>
+
+                  <h3 className="font-semibold mb-2">
+                    Couleurs
+                  </h3>
+
                   <div className="flex flex-wrap gap-3">
-                    {product.colors.map(color => (
+
+                    {product.colors.map(color=>(
+
                       <button
                         key={color.colorId}
-                        onClick={() => {
-                          setSelectedColorId(color.colorId);
-                          setSelectedImageIndex(0);
+                        onClick={()=>{
+                          setSelectedColorId(color.colorId)
+                          setSelectedImageIndex(0)
                         }}
                         className={`px-3 py-2 rounded-lg border-2 ${
-                          selectedColorId === color.colorId
-                            ? 'border-gray-900'
-                            : 'border-gray-300'
+                          selectedColorId===color.colorId
+                          ? 'border-gray-900'
+                          : 'border-gray-300'
                         }`}
                       >
                         {color.name}
                       </button>
+
                     ))}
+
                   </div>
+
                 </div>
+
               )}
 
               {/* DESCRIPTION */}
-              {product.description && (
+
+              {product.description &&(
+
                 <div className="mb-6">
-                  <h3 className="font-semibold mb-2">{t('description')}</h3>
-                  <p className="text-gray-600">{product.description}</p>
+
+                  <h3 className="font-semibold mb-2">
+                    {t('description')}
+                  </h3>
+
+                  <p className="text-gray-600">
+                    {product.description}
+                  </p>
+
                 </div>
+
               )}
 
               {/* ACTIONS */}
+
               <div className="space-y-3">
+
                 <Link
                   href={`/checkout/${product.id}?size=${selectedSize ?? ''}&color=${selectedColorId ?? ''}`}
                 >
-                <Button
-  className="w-full"
-  size="lg"
-  disabled={!selectedSize || !selectedColorId}
-  onClick={() => {
-    if (typeof window !== 'undefined' && (window as any).fbq) {
-      (window as any).fbq('track', 'InitiateCheckout', {
-        content_name: product.name,
-        content_ids: [product.id],
-        value: product.price,
-        currency: 'DZD',
-      });
-    }
-  }}
->
-  {t('order')}
-</Button>
-                </Link>
 
-                {(!selectedSize || !selectedColorId) && (
-                  <p className="text-sm text-red-600 text-center">
-                    Veuillez sélectionner une pointure et une couleur
-                  </p>
-                )}
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    disabled={!selectedSize || !selectedColorId}
+                  >
+                    {t('order')}
+                  </Button>
+
+                </Link>
 
                 <Button
                   variant="outline"
@@ -349,17 +467,28 @@ useEffect(() => {
                   size="lg"
                   onClick={handleWhatsAppOrder}
                 >
-                  <MessageCircle className="h-4 w-4 mr-2" />
+
+                  <MessageCircle className="h-4 w-4 mr-2"/>
+
                   {t('whatsapp_order')}
+
                 </Button>
+
               </div>
+
             </div>
+
           </div>
+
         </div>
+
       </main>
 
-      <Footer />
-      <WhatsAppButton />
+      <Footer/>
+      <WhatsAppButton/>
+
     </>
-  );
+
+  )
+
 }

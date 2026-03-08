@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import Image from 'next/image'
 import Link from 'next/link'
@@ -27,6 +27,7 @@ export default function ProductCard({
   const { t } = useLanguage()
 
   const [hovered, setHovered] = useState(false)
+
   const [selectedColorId, setSelectedColorId] = useState(
     product.colors?.[0]?.colorId || null
   )
@@ -66,11 +67,13 @@ export default function ProductCard({
   }
 
   return (
+
     <div className="group bg-white rounded-2xl border border-leather-light/20 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
 
       {/* IMAGE */}
 
       <Link href={`/product/${product.slug}`}>
+
         <div
           className="relative h-64 bg-leather-beige overflow-hidden"
           onMouseEnter={() => setHovered(true)}
@@ -82,21 +85,29 @@ export default function ProductCard({
           {/* PROMO BADGE */}
 
           {promotion && (
+
             <div className="absolute top-3 left-3 z-20">
+
               <Badge className="bg-red-500 text-white text-xs px-3 py-1 rounded-full shadow">
                 🔥 PROMO
               </Badge>
+
             </div>
+
           )}
 
           {/* BRAND */}
 
           {brand && (
+
             <div className="absolute bottom-3 right-3 z-20">
+
               <Badge className="bg-white/90 text-leather-dark border px-2 py-1 text-xs rounded-full backdrop-blur">
                 {brand.name}
               </Badge>
+
             </div>
+
           )}
 
           {/* IMAGES */}
@@ -104,37 +115,41 @@ export default function ProductCard({
           <div className="relative w-full h-full">
 
             {firstImage && (
+
               <Image
-  src={firstImage}
-  priority={false}
+                src={firstImage}
                 alt={product.name}
                 fill
                 sizes="(max-width:768px) 100vw, 25vw"
                 quality={50}
+                priority={false}
                 loading="lazy"
-                className={`object-cover transition-all duration-300 ${
-                  hovered ? "opacity-0 scale-105" : "opacity-100"
-                }`}
+                className={`object-cover transition-all duration-500 ease-out
+                ${hovered ? "opacity-0 scale-105" : "opacity-100 scale-100"}`}
               />
+
             )}
 
             {secondImage && (
+
               <Image
                 src={secondImage}
                 alt={product.name}
                 fill
                 sizes="(max-width:768px) 100vw, 25vw"
                 quality={50}
+                priority={false}
                 loading="lazy"
-                className={`object-cover transition-all duration-300 ${
-                  hovered ? "opacity-100 scale-100" : "opacity-0"
-                }`}
+                className={`object-cover transition-all duration-500 ease-out
+                ${hovered ? "opacity-100 scale-100" : "opacity-0 scale-105"}`}
               />
+
             )}
 
           </div>
 
         </div>
+
       </Link>
 
       {/* CONTENT */}
@@ -146,9 +161,11 @@ export default function ProductCard({
         <div className="flex items-center justify-between mb-2">
 
           <Link href={`/product/${product.slug}`}>
+
             <h3 className="font-semibold text-lg text-leather-dark hover:text-leather-brown transition line-clamp-1">
               {product.name}
             </h3>
+
           </Link>
 
         </div>
@@ -162,9 +179,11 @@ export default function ProductCard({
           </p>
 
           {promotion && (
+
             <p className="text-sm text-gray-400 line-through">
               {formatPrice(product.price)}
             </p>
+
           )}
 
         </div>
@@ -191,14 +210,14 @@ export default function ProductCard({
                     setHovered(false)
                     setSelectedColorId(color.colorId)
                   }}
-                  className={`w-6 h-6 rounded-full border-2 transition-all
+                  className={`w-6 h-6 rounded-full border-2 transition-all duration-200
                   ${
                     selectedColorId === color.colorId
                       ? "border-leather-brown scale-110"
                       : "border-gray-300"
                   }`}
                   style={{
-                   backgroundColor: colorsMap[color.name] || "#ccc"
+                    backgroundColor: colorsMap[color.name] || "#ccc"
                   }}
                 />
 
@@ -243,5 +262,7 @@ export default function ProductCard({
       </div>
 
     </div>
+
   )
+
 }
