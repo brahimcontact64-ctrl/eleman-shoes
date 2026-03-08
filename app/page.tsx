@@ -1,19 +1,29 @@
 'use client';
 
+import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { collection, query, where, limit, getDocs, doc, getDoc } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  limit,
+  getDocs,
+  doc,
+  getDoc,
+} from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Product, Brand } from '@/lib/types';
-import Link from 'next/link';
+
 import Navbar from '@/components/Navbar';
 import PromoBanner from '@/components/PromoBanner';
 import Footer from '@/components/Footer';
 import WhatsAppButton from '@/components/WhatsAppButton';
 import ProductCard from '@/components/ProductCard';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Truck, Shield, Star, Zap } from 'lucide-react';
- import { orderBy } from 'firebase/firestore';
 
 interface SiteSettings {
   heroImage: string;
@@ -22,6 +32,13 @@ interface SiteSettings {
   heroCtaText: string;
   whatsappNumber: string;
 }
+
+interface CategorySection {
+  categoryName: string;
+  products: Product[];
+}
+
+type PromotionMap = Record<string, any>;
 
 const defaultSettings: SiteSettings = {
   heroImage: '/whatsapp_image_2026-02-03_at_11.14.37.jpeg',
@@ -32,118 +49,131 @@ const defaultSettings: SiteSettings = {
 };
 
 export default function Home() {
-  const [categoryProducts, setCategoryProducts] = useState<
-  { categoryName: string; products: Product[] }[]
->([]);
+  const [categoryProducts, setCategoryProducts] = useState<CategorySection[]>([]);
   const [brands, setBrands] = useState<Map<string, Brand>>(new Map());
   const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
+  const [promotions, setPromotions] = useState<PromotionMap | null>(null);
   const [loading, setLoading] = useState(true);
-const [promotions, setPromotions] = useState<Record<string, any> | null>(null)
+
   useEffect(() => {
-    fetchData();
-  }, []);
-  useEffect(() => {
-  const fetchPromotions = async () => {
+    const fetchHomeData = async () => {
+      try {
+        const categoryIds = [
+          'SrgQbBADDaLSCEmo96Sn',
+          'uFLBnL1DCF7pAUgl2u8c',
+        ];
 
-    const snap = await getDocs(
-      query(
-        collection(db, "promotions"),
-        where("active", "==", true)
-      )
-    )
+        const [
+          settingsDoc,
+          brandsSnapshot,
+          promotionsSnapshot,
+          categoriesSnapshot,
+        ] = await Promise.all([
+          getDoc(doc(db, 'site_settings', 'main')),
+          getDocs(collection(db, 'brands')),
+          getDocs(
+            query(
+              collection(db, 'promotions'),
+              where('active', '==', true)
+            )
+          ),
+          getDocs(
+            query(
+              collection(db, 'categories'),
+              where('__name__', 'in', categoryIds)
+            )
+          ),
+        ]);
 
-    const map:any = {}
+        /* ================= SETTINGS ================= */
 
-    snap.forEach(doc => {
-      const data = doc.data()
-      map[data.productId] = data
-    })
+        if (settingsDoc.exists()) {
+          setSettings({
+            ...defaultSettings,
+            ...(settingsDoc.data() as Partial<SiteSettings>),
+          });
+        }
 
-    setPromotions(map)
+        /* ================= BRANDS ================= */
 
-  }
+        const brandsMap = new Map<string, Brand>();
+        brandsSnapshot.forEach((brandDoc) => {
+          brandsMap.set(
+            brandDoc.id,
+            { id: brandDoc.id, ...brandDoc.data() } as Brand
+          );
+        });
+        setBrands(brandsMap);
 
-  fetchPromotions()
-}, [])
+        /* ================= PROMOTIONS ================= */
 
-  const fetchData = async () => {
-    try {
-      const settingsDoc = await getDoc(doc(db, 'site_settings', 'main'));
-      if (settingsDoc.exists()) {
-        setSettings({ ...defaultSettings, ...settingsDoc.data() } as SiteSettings);
+        const promotionsMap: PromotionMap = {};
+        promotionsSnapshot.forEach((promoDoc) => {
+          const data = promoDoc.data();
+          if (data?.productId) {
+            promotionsMap[data.productId] = {
+              id: promoDoc.id,
+              ...data,
+            };
+          }
+        });
+        setPromotions(promotionsMap);
+
+        /* ================= PRODUCTS BY CATEGORY ================= */
+
+        const result: CategorySection[] = await Promise.all(
+          categoriesSnapshot.docs.map(async (catDoc) => {
+            const categoryId = catDoc.id;
+            const categoryName = catDoc.data().name;
+
+            const productsSnap = await getDocs(
+              query(
+                collection(db, 'products'),
+                where('isActive', '==', true),
+                where('categoryId', '==', categoryId),
+                limit(4)
+              )
+            );
+
+            const products = productsSnap.docs.map((productDoc) => ({
+              id: productDoc.id,
+              ...productDoc.data(),
+            })) as Product[];
+
+            return {
+              categoryName,
+              products,
+            };
+          })
+        );
+
+        setCategoryProducts(result);
+      } catch (error) {
+        console.error('Home fetch error:', error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const brandsSnapshot = await getDocs(collection(db, 'brands'));
-      const brandsMap = new Map<string, Brand>();
-      brandsSnapshot.forEach((doc) => {
-        brandsMap.set(doc.id, { id: doc.id, ...doc.data() } as Brand);
-      });
-      setBrands(brandsMap);
-
-     
-
-
-const categoryIds = [
-  'SrgQbBADDaLSCEmo96Sn',
-  'uFLBnL1DCF7pAUgl2u8c',
-];
-
-const categoriesSnapshot = await getDocs(
-  query(
-    collection(db, 'categories'),
-    where('__name__', 'in', categoryIds)
-  )
-);
-
-const result: { categoryName: string; products: Product[] }[] = [];
-
-for (const catDoc of categoriesSnapshot.docs) {
-  const categoryId = catDoc.id;
-  const categoryName = catDoc.data().name;
-
-  const productsSnap = await getDocs(
-    query(
-      collection(db, 'products'),
-      where('isActive', '==', true),
-      where('categoryId', '==', categoryId),
-      limit(4)
-    )
-  );
-
-  const products = productsSnap.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as Product[];
-
-  result.push({
-    categoryName,
-    products,
-  });
-}
-
-setCategoryProducts(result);
-
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-};
+    fetchHomeData();
+  }, []);
 
   return (
     <>
-  <Navbar />
+      <Navbar />
+      <PromoBanner />
 
-  <PromoBanner />
-
-  <main className="bg-leather-beige">
-
-        {/* ================= HERO (FIXED FINAL) ================= */}
-        <section className="relative w-full h-[100svh] md:h-[700px]">
-          <img
+      <main className="bg-leather-beige">
+        {/* ================= HERO ================= */}
+        <section className="relative w-full h-[100svh] md:h-[700px] overflow-hidden">
+          <Image
             src={settings.heroImage}
             alt="Chaussures en cuir"
-            className="absolute inset-0 w-full h-full object-cover"
+            fill
+            priority
+            quality={60}
+            sizes="100vw"
+            className="object-cover"
           />
 
           <div className="absolute inset-0 bg-black/40" />
@@ -179,70 +209,85 @@ setCategoryProducts(result);
         {/* ================= PRODUCTS ================= */}
         <section className="py-16">
           <div className="container mx-auto px-4">
-           <div className="text-center mb-12">
-  <h2 className="text-4xl font-bold mb-4 text-leather-dark">
-    Produits Populaires
-  </h2>
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold mb-4 text-leather-dark">
+                Produits Populaires
+              </h2>
 
-  <p className="text-xl text-leather-gray mb-6">
-    Découvrez nos meilleures ventes
-  </p>
+              <p className="text-xl text-leather-gray mb-6">
+                Découvrez nos meilleures ventes
+              </p>
 
-  <Link href="/catalog">
-    <Button
-      variant="outline"
-      className="border-leather-brown text-leather-brown hover:bg-leather-brown hover:text-white transition-all px-6"
-    >
-      Voir tout →
-    </Button>
-  </Link>
-</div>
-<PromoBanner />
+              <Link href="/catalog">
+                <Button
+                  variant="outline"
+                  className="border-leather-brown text-leather-brown hover:bg-leather-brown hover:text-white transition-all px-6"
+                >
+                  Voir tout →
+                </Button>
+              </Link>
+            </div>
 
             {loading ? (
-  <div className="flex justify-center py-12">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-leather-brown" />
-  </div>
-) : (
-  <div className="space-y-16">
-    {categoryProducts.map((section, index) => (
-      <div key={index}>
-        <h2 className="text-3xl font-bold mb-8 text-leather-dark text-center">
-          {section.categoryName}
-        </h2>
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-leather-brown" />
+              </div>
+            ) : (
+              <div className="space-y-16">
+                {categoryProducts.map((section, index) => (
+                  <div key={index}>
+                    <h2 className="text-3xl font-bold mb-8 text-leather-dark text-center">
+                      {section.categoryName}
+                    </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {section.products.map(product => (
-  <ProductCard
-    key={product.id}
-    product={product}
-    brand={brands.get(product.brandId)}
-   promotion={promotions?.[product.id]}
-  />
-))}
-        </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {section.products.map((product) => (
+                        <ProductCard
+                          key={product.id}
+                          product={product}
+                          brand={brands.get(product.brandId)}
+                          promotion={promotions?.[product.id]}
+                        />
+                      ))}
+                    </div>
 
-        <div className="text-center mt-8">
-          <Link href={`/catalog?category=${section.categoryName}`}>
-            <Button variant="outline">
-              Voir tout →
-            </Button>
-          </Link>
-        </div>
-      </div>
-    ))}
-  </div>
-)}
+                    <div className="text-center mt-8">
+                      <Link href={`/catalog?category=${section.categoryName}`}>
+                        <Button variant="outline">
+                          Voir tout →
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
         {/* ================= FEATURES ================= */}
         <section className="py-16 bg-white">
           <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Feature icon={Star} title="Large Sélection" text="Des centaines de modèles pour tous les styles et occasions" />
-            <Feature icon={Shield} title="Qualité Premium" text="Chaussures en cuir véritable de haute qualité" />
-            <Feature icon={Truck} title="Livraison Rapide" text="Livraison dans toute l’Algérie sous 48–72h" />
-            <Feature icon={Zap} title="Paiement Sécurisé" text="Paiement à la livraison pour votre sécurité" />
+            <Feature
+              icon={Star}
+              title="Large Sélection"
+              text="Des centaines de modèles pour tous les styles et occasions"
+            />
+            <Feature
+              icon={Shield}
+              title="Qualité Premium"
+              text="Chaussures en cuir véritable de haute qualité"
+            />
+            <Feature
+              icon={Truck}
+              title="Livraison Rapide"
+              text="Livraison dans toute l’Algérie sous 48–72h"
+            />
+            <Feature
+              icon={Zap}
+              title="Paiement Sécurisé"
+              text="Paiement à la livraison pour votre sécurité"
+            />
           </div>
         </section>
 
@@ -254,7 +299,10 @@ setCategoryProducts(result);
               Contactez-nous dès maintenant pour passer votre commande
             </p>
             <Link href="/contact">
-              <Button size="lg" className="bg-white text-leather-dark hover:bg-leather-beige">
+              <Button
+                size="lg"
+                className="bg-white text-leather-dark hover:bg-leather-beige"
+              >
                 Nous Contacter
               </Button>
             </Link>
@@ -268,14 +316,24 @@ setCategoryProducts(result);
   );
 }
 
-function Feature({ icon: Icon, title, text }: any) {
+function Feature({
+  icon: Icon,
+  title,
+  text,
+}: {
+  icon: any;
+  title: string;
+  text: string;
+}) {
   return (
     <Card className="bg-leather-beige/50 text-center">
       <CardContent className="p-6">
         <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-leather-light/30 flex items-center justify-center">
           <Icon className="h-8 w-8 text-leather-brown" />
         </div>
-        <h3 className="text-xl font-semibold mb-2 text-leather-dark">{title}</h3>
+        <h3 className="text-xl font-semibold mb-2 text-leather-dark">
+          {title}
+        </h3>
         <p className="text-leather-gray">{text}</p>
       </CardContent>
     </Card>
