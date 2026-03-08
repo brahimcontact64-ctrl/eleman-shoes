@@ -82,15 +82,11 @@ export interface ProductSizeStock {
 
 
 export interface ProductColor {
-  colorId: string;
-  name: string;
-  hexCode?: string;
-
-
-  images: ProductColorImage[];
-
- 
-  sizes: ProductSizeStock[];
+  colorId: string
+  name: string
+  hexCode?: string
+  images: any[]
+  sizes: any[]
 }
 
 

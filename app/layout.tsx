@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -175,7 +176,10 @@ if (!window.__META_PIXEL_INITIALIZED__) {
           </LanguageProvider>
         </AuthProvider>
 
-      </body>
+  
+    </body>
+    <SpeedInsights />
     </html>
+  
   );
 }

@@ -26,73 +26,99 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, brand }: ProductCardProps) {
+
   const { t } = useLanguage();
 
   const [promotion, setPromotion] = useState<any | null>(null);
+  const [colorsMap, setColorsMap] = useState<any>({});
+  const [selectedColorId, setSelectedColorId] = useState(
+    product.colors?.[0]?.colorId || null
+  );
 
   /* ================= FETCH PROMOTION ================= */
 
   useEffect(() => {
     const fetchPromotion = async () => {
-      try {
-        const q = query(
-          collection(db, 'promotions'),
-          where('productId', '==', product.id),
-          where('active', '==', true),
-          limit(1)
-        );
+      const q = query(
+        collection(db, 'promotions'),
+        where('productId', '==', product.id),
+        where('active', '==', true),
+        limit(1)
+      );
 
-        const snap = await getDocs(q);
+      const snap = await getDocs(q);
 
-        if (!snap.empty) {
-          setPromotion({
-            id: snap.docs[0].id,
-            ...snap.docs[0].data(),
-          });
-        }
-      } catch (e) {
-        console.error('Promotion fetch error:', e);
+      if (!snap.empty) {
+        setPromotion({
+          id: snap.docs[0].id,
+          ...snap.docs[0].data(),
+        });
       }
     };
 
     fetchPromotion();
   }, [product.id]);
 
-  /* ================= IMAGE ================= */
+  /* ================= FETCH COLORS ================= */
+
+  useEffect(() => {
+    const fetchColors = async () => {
+
+      const snap = await getDocs(collection(db, "colors"));
+
+      const map: any = {};
+
+      snap.forEach(doc => {
+        const data = doc.data();
+        map[data.name] = data.hexCode;
+      });
+
+      setColorsMap(map);
+    };
+
+    fetchColors();
+  }, []);
+
+  /* ================= ACTIVE COLOR ================= */
+
+  const activeColor =
+    product.colors?.find(c => c.colorId === selectedColorId) ||
+    product.colors?.[0];
 
   const mainImage =
-    product.colors?.[0]?.images?.[0]?.url || null;
+    activeColor?.images?.[0]?.url || null;
 
   /* ================= PRICE ================= */
 
-  const finalPrice = promotion
-    ? promotion.newPrice
-    : product.price;
+  const finalPrice =
+    promotion?.newPrice || product.price;
 
   /* ================= WHATSAPP ================= */
 
   const handleWhatsAppOrder = () => {
+
     const message =
-      'Bonjour, je suis intéressé par ce produit:\n' +
+      "Bonjour, je suis intéressé par ce produit:\n" +
       product.name +
-      '\nPrix: ' +
+      "\nPrix: " +
       formatPrice(finalPrice);
 
     window.open(
-      'https://wa.me/?text=' + encodeURIComponent(message),
-      '_blank'
+      "https://wa.me/?text=" + encodeURIComponent(message),
+      "_blank"
     );
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 border border-leather-light/20">
+    <div className="group bg-white rounded-xl border border-leather-light/20 overflow-hidden hover:shadow-xl transition-all duration-300">
+
+      {/* IMAGE */}
 
       <Link href={'/product/' + product.slug}>
-        <div className="relative h-64 bg-leather-beige flex items-center justify-center">
+        <div className="relative h-64 bg-leather-beige flex items-center justify-center overflow-hidden">
 
-          {/* PROMOTION BADGE */}
           {promotion && (
-            <div className="absolute top-2 left-2 z-10">
+            <div className="absolute top-3 left-3 z-10">
               <Badge className="bg-red-500 text-white text-xs px-2 py-1">
                 🔥 PROMO
               </Badge>
@@ -100,24 +126,35 @@ export default function ProductCard({ product, brand }: ProductCardProps) {
           )}
 
           {mainImage ? (
-            <Image
-              src={mainImage}
-              alt={product.name}
-              fill
-              className="object-cover hover:scale-105 transition-transform duration-300"
-            />
+          <Image
+  src={mainImage}
+  alt={product.name}
+  fill
+  sizes="(max-width:768px) 100vw, 25vw"
+  loading="lazy"
+  quality={40}
+  priority={false}
+  className="object-cover"
+/>
           ) : (
-            <span className="text-sm text-leather-gray">
+            <span className="text-sm text-gray-400">
               No image
             </span>
           )}
+
         </div>
       </Link>
 
+      {/* CONTENT */}
+
       <div className="p-4">
+
+        {/* TITLE */}
+
         <div className="flex items-center justify-between mb-2">
+
           <Link href={'/product/' + product.slug}>
-            <h3 className="font-semibold text-lg text-leather-dark hover:text-leather-brown transition-colors">
+            <h3 className="font-semibold text-lg text-leather-dark hover:text-leather-brown transition">
               {product.name}
             </h3>
           </Link>
@@ -130,6 +167,7 @@ export default function ProductCard({ product, brand }: ProductCardProps) {
               {brand.name}
             </Badge>
           )}
+
         </div>
 
         {/* PRICE */}
@@ -151,28 +189,41 @@ export default function ProductCard({ product, brand }: ProductCardProps) {
         {/* COLORS */}
 
         {product.colors?.length > 0 && (
+
           <div className="mb-3">
-            <p className="text-xs text-leather-gray mb-1">
-              Couleurs disponibles:
+
+            <p className="text-xs text-gray-500 mb-1">
+              Couleurs disponibles
             </p>
 
-            <div className="flex flex-wrap gap-1">
-              {product.colors.slice(0, 5).map(color => (
-                <div
+            <div className="flex gap-2">
+
+              {product.colors.slice(0,5).map(color => (
+
+                <button
                   key={color.colorId}
-                  className="w-6 h-6 rounded-full border-2 border-leather-light/50 shadow-sm"
+                  type="button"
+                  onClick={(e)=>{
+                    e.preventDefault();
+                    setSelectedColorId(color.colorId);
+                  }}
+                  className={`w-6 h-6 rounded-full border-2 transition
+                  ${selectedColorId === color.colorId
+                    ? "border-leather-brown scale-110"
+                    : "border-gray-300"
+                  }`}
+                  style={{
+                    backgroundColor: colorsMap[color.name] || "#ccc"
+                  }}
                   title={color.name}
-                  style={{ backgroundColor: '#ccc' }}
                 />
+
               ))}
 
-              {product.colors.length > 5 && (
-                <div className="w-6 h-6 rounded-full border-2 border-leather-light/50 bg-leather-beige flex items-center justify-center text-xs text-leather-gray">
-                  +{product.colors.length - 5}
-                </div>
-              )}
             </div>
+
           </div>
+
         )}
 
         {/* ACTIONS */}
@@ -180,12 +231,14 @@ export default function ProductCard({ product, brand }: ProductCardProps) {
         <div className="space-y-2">
 
           <Link href={'/checkout/' + product.id}>
+
             <Button
               className="w-full bg-leather-brown hover:bg-leather-coffee text-white"
               size="lg"
             >
               {t('order')}
             </Button>
+
           </Link>
 
           <Button
@@ -194,12 +247,17 @@ export default function ProductCard({ product, brand }: ProductCardProps) {
             size="lg"
             onClick={handleWhatsAppOrder}
           >
+
             <MessageCircle className="h-4 w-4 mr-2" />
+
             {t('whatsapp_order')}
+
           </Button>
 
         </div>
+
       </div>
+
     </div>
   );
 }
