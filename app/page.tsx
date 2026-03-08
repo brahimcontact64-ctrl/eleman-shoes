@@ -1,9 +1,9 @@
-'use client';
+'use client'
 
-import Image from 'next/image';
-import Link from 'next/link';
-import ProductCardSkeleton from '@/components/ProductCardSkeleton'
-import { useEffect, useState } from 'react';
+import Image from 'next/image'
+import Link from 'next/link'
+import dynamic from 'next/dynamic'
+import { useEffect, useState } from 'react'
 import {
   collection,
   query,
@@ -12,38 +12,39 @@ import {
   getDocs,
   doc,
   getDoc,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
-import { Product, Brand } from '@/lib/types';
+} from 'firebase/firestore'
 
-import Navbar from '@/components/Navbar';
-import PromoBanner from '@/components/PromoBanner';
-import Footer from '@/components/Footer';
-import WhatsAppButton from '@/components/WhatsAppButton';
-const ProductCard = dynamic(
-  () => import('@/components/ProductCard'),
-  { ssr: false }
-)
-import dynamic from 'next/dynamic'
+import { db } from '@/lib/firebase/config'
+import { Product, Brand } from '@/lib/types'
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Truck, Shield, Star, Zap } from 'lucide-react';
+import Navbar from '@/components/Navbar'
+import PromoBanner from '@/components/PromoBanner'
+import Footer from '@/components/Footer'
+import WhatsAppButton from '@/components/WhatsAppButton'
+import ProductCardSkeleton from '@/components/ProductCardSkeleton'
+
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Truck, Shield, Star, Zap } from 'lucide-react'
+
+const ProductCard = dynamic(() => import('@/components/ProductCard'), {
+  ssr: false,
+})
 
 interface SiteSettings {
-  heroImage: string;
-  heroTitle: string;
-  heroSubtitle: string;
-  heroCtaText: string;
-  whatsappNumber: string;
+  heroImage: string
+  heroTitle: string
+  heroSubtitle: string
+  heroCtaText: string
+  whatsappNumber: string
 }
 
 interface CategorySection {
-  categoryName: string;
-  products: Product[];
+  categoryName: string
+  products: Product[]
 }
 
-type PromotionMap = Record<string, any>;
+type PromotionMap = Record<string, any>
 
 const defaultSettings: SiteSettings = {
   heroImage: '/whatsapp_image_2026-02-03_at_11.14.37.jpeg',
@@ -51,22 +52,41 @@ const defaultSettings: SiteSettings = {
   heroSubtitle: 'Élégance, confort et qualité pour toute la famille',
   heroCtaText: 'Commander via WhatsApp',
   whatsappNumber: '',
-};
+}
 
 export default function Home() {
-  const [categoryProducts, setCategoryProducts] = useState<CategorySection[]>([]);
-  const [brands, setBrands] = useState<Map<string, Brand>>(new Map());
-  const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
-  const [promotions, setPromotions] = useState<PromotionMap | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [categoryProducts, setCategoryProducts] = useState<CategorySection[]>([])
+  const [brands, setBrands] = useState<Map<string, Brand>>(new Map())
+  const [settings, setSettings] = useState<SiteSettings>(defaultSettings)
+  const [promotions, setPromotions] = useState<PromotionMap | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [colorsMap, setColorsMap] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const fetchHomeData = async () => {
       try {
+
+        /* ================= CATEGORY IDS ================= */
+
         const categoryIds = [
           'SrgQbBADDaLSCEmo96Sn',
           'uFLBnL1DCF7pAUgl2u8c',
-        ];
+        ]
+
+        /* ================= COLORS ================= */
+
+        const colorsSnap = await getDocs(collection(db, 'colors'))
+
+        const colors: Record<string, string> = {}
+
+        colorsSnap.forEach(doc => {
+          const data = doc.data()
+          colors[data.name] = data.hexCode
+        })
+
+        setColorsMap(colors)
+
+        /* ================= FETCH DATA ================= */
 
         const [
           settingsDoc,
@@ -88,7 +108,7 @@ export default function Home() {
               where('__name__', 'in', categoryIds)
             )
           ),
-        ]);
+        ])
 
         /* ================= SETTINGS ================= */
 
@@ -96,40 +116,46 @@ export default function Home() {
           setSettings({
             ...defaultSettings,
             ...(settingsDoc.data() as Partial<SiteSettings>),
-          });
+          })
         }
 
         /* ================= BRANDS ================= */
 
-        const brandsMap = new Map<string, Brand>();
-        brandsSnapshot.forEach((brandDoc) => {
+        const brandsMap = new Map<string, Brand>()
+
+        brandsSnapshot.forEach(brandDoc => {
           brandsMap.set(
             brandDoc.id,
             { id: brandDoc.id, ...brandDoc.data() } as Brand
-          );
-        });
-        setBrands(brandsMap);
+          )
+        })
+
+        setBrands(brandsMap)
 
         /* ================= PROMOTIONS ================= */
 
-        const promotionsMap: PromotionMap = {};
-        promotionsSnapshot.forEach((promoDoc) => {
-          const data = promoDoc.data();
+        const promotionsMap: PromotionMap = {}
+
+        promotionsSnapshot.forEach(promoDoc => {
+          const data = promoDoc.data()
+
           if (data?.productId) {
             promotionsMap[data.productId] = {
               id: promoDoc.id,
               ...data,
-            };
+            }
           }
-        });
-        setPromotions(promotionsMap);
+        })
 
-        /* ================= PRODUCTS BY CATEGORY ================= */
+        setPromotions(promotionsMap)
+
+        /* ================= PRODUCTS ================= */
 
         const result: CategorySection[] = await Promise.all(
           categoriesSnapshot.docs.map(async (catDoc) => {
-            const categoryId = catDoc.id;
-            const categoryName = catDoc.data().name;
+
+            const categoryId = catDoc.id
+            const categoryName = catDoc.data().name
 
             const productsSnap = await getDocs(
               query(
@@ -138,30 +164,31 @@ export default function Home() {
                 where('categoryId', '==', categoryId),
                 limit(4)
               )
-            );
+            )
 
-            const products = productsSnap.docs.map((productDoc) => ({
+            const products = productsSnap.docs.map(productDoc => ({
               id: productDoc.id,
               ...productDoc.data(),
-            })) as Product[];
+            })) as Product[]
 
             return {
               categoryName,
               products,
-            };
+            }
           })
-        );
+        )
 
-        setCategoryProducts(result);
+        setCategoryProducts(result)
+
       } catch (error) {
-        console.error('Home fetch error:', error);
+        console.error('Home fetch error:', error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchHomeData();
-  }, []);
+    fetchHomeData()
+  }, [])
 
   return (
     <>
@@ -169,8 +196,11 @@ export default function Home() {
       <PromoBanner />
 
       <main className="bg-leather-beige">
-        {/* ================= HERO ================= */}
+
+        {/* HERO */}
+
         <section className="relative w-full h-[100svh] md:h-[700px] overflow-hidden">
+
           <Image
             src={settings.heroImage}
             alt="Chaussures en cuir"
@@ -184,8 +214,11 @@ export default function Home() {
           <div className="absolute inset-0 bg-black/40" />
 
           <div className="relative z-10 h-full flex items-center">
+
             <div className="container mx-auto px-4 text-white text-center md:text-left">
+
               <div className="max-w-xl">
+
                 <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif font-bold mb-4 drop-shadow-lg">
                   {settings.heroTitle}
                 </h1>
@@ -206,15 +239,20 @@ export default function Home() {
                     {settings.heroCtaText}
                   </Button>
                 </a>
+
               </div>
             </div>
           </div>
         </section>
 
-        {/* ================= PRODUCTS ================= */}
+        {/* PRODUCTS */}
+
         <section className="py-16">
+
           <div className="container mx-auto px-4">
+
             <div className="text-center mb-12">
+
               <h2 className="text-4xl font-bold mb-4 text-leather-dark">
                 Produits Populaires
               </h2>
@@ -224,107 +262,73 @@ export default function Home() {
               </p>
 
               <Link href="/catalog">
+
                 <Button
                   variant="outline"
                   className="border-leather-brown text-leather-brown hover:bg-leather-brown hover:text-white transition-all px-6"
                 >
                   Voir tout →
                 </Button>
+
               </Link>
+
             </div>
 
-           {loading ? (
+            {loading ? (
 
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-    {Array.from({ length: 8 }).map((_, i) => (
-      <ProductCardSkeleton key={i} />
-    ))}
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <ProductCardSkeleton key={i} />
+                ))}
 
-  </div>
+              </div>
 
-) : (
+            ) : (
+
               <div className="space-y-16">
+
                 {categoryProducts.map((section, index) => (
+
                   <div key={index}>
+
                     <h2 className="text-3xl font-bold mb-8 text-leather-dark text-center">
                       {section.categoryName}
                     </h2>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      {section.products.map((product) => (
+
+                      {section.products.map(product => (
+
                         <ProductCard
                           key={product.id}
                           product={product}
                           brand={brands.get(product.brandId)}
                           promotion={promotions?.[product.id]}
+                          colorsMap={colorsMap}
                         />
+
                       ))}
+
                     </div>
 
-                    <div className="text-center mt-8">
-                      <Link href={`/catalog?category=${section.categoryName}`}>
-                        <Button variant="outline">
-                          Voir tout →
-                        </Button>
-                      </Link>
-                    </div>
                   </div>
+
                 ))}
+
               </div>
+
             )}
+
           </div>
         </section>
 
-        {/* ================= FEATURES ================= */}
-        <section className="py-16 bg-white">
-          <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Feature
-              icon={Star}
-              title="Large Sélection"
-              text="Des centaines de modèles pour tous les styles et occasions"
-            />
-            <Feature
-              icon={Shield}
-              title="Qualité Premium"
-              text="Chaussures en cuir véritable de haute qualité"
-            />
-            <Feature
-              icon={Truck}
-              title="Livraison Rapide"
-              text="Livraison dans toute l’Algérie sous 48–72h"
-            />
-            <Feature
-              icon={Zap}
-              title="Paiement Sécurisé"
-              text="Paiement à la livraison pour votre sécurité"
-            />
-          </div>
-        </section>
-
-        {/* ================= CTA ================= */}
-        <section className="py-20 bg-gradient-to-br from-leather-brown to-leather-coffee text-white">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-4xl font-bold mb-6">Prêt à Commander ?</h2>
-            <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
-              Contactez-nous dès maintenant pour passer votre commande
-            </p>
-            <Link href="/contact">
-              <Button
-                size="lg"
-                className="bg-white text-leather-dark hover:bg-leather-beige"
-              >
-                Nous Contacter
-              </Button>
-            </Link>
-          </div>
-        </section>
       </main>
 
       <Footer />
       <WhatsAppButton />
     </>
-  );
+  )
 }
 
 function Feature({
@@ -332,21 +336,27 @@ function Feature({
   title,
   text,
 }: {
-  icon: any;
-  title: string;
-  text: string;
+  icon: any
+  title: string
+  text: string
 }) {
   return (
     <Card className="bg-leather-beige/50 text-center">
       <CardContent className="p-6">
+
         <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-leather-light/30 flex items-center justify-center">
           <Icon className="h-8 w-8 text-leather-brown" />
         </div>
+
         <h3 className="text-xl font-semibold mb-2 text-leather-dark">
           {title}
         </h3>
-        <p className="text-leather-gray">{text}</p>
+
+        <p className="text-leather-gray">
+          {text}
+        </p>
+
       </CardContent>
     </Card>
-  );
+  )
 }

@@ -14,12 +14,14 @@ interface ProductCardProps {
   product: Product
   brand?: Brand
   promotion?: any
+  colorsMap?: Record<string,string>
 }
 
 export default function ProductCard({
   product,
   brand,
   promotion,
+  colorsMap = {}
 }: ProductCardProps) {
 
   const { t } = useLanguage()
@@ -196,7 +198,7 @@ export default function ProductCard({
                       : "border-gray-300"
                   }`}
                   style={{
-                    backgroundColor: color.hexCode || "#ccc"
+                   backgroundColor: colorsMap[color.name] || "#ccc"
                   }}
                 />
 
