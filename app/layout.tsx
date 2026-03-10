@@ -8,11 +8,13 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { LanguageProvider } from '@/contexts/LanguageContext'
 import { Toaster } from '@/components/ui/toaster'
 
+/* ================= FONT ================= */
+
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-inter',
-  preload: true,
+  preload: true
 })
 
 /* ================= VIEWPORT ================= */
@@ -85,12 +87,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr" className="scroll-smooth" suppressHydrationWarning>
+
+      <head>
+        {/* Improve image loading from Firebase */}
+        <link rel="preconnect" href="https://firebasestorage.googleapis.com" />
+        <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
+      </head>
+
       <body
         className={`${inter.variable} font-sans antialiased bg-leather-beige text-leather-dark`}
       >
         {/* ================= META PIXEL ================= */}
 
-       <Script id="meta-pixel" strategy="lazyOnload">
+        <Script id="meta-pixel" strategy="lazyOnload">
           {`
 !function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -109,9 +118,9 @@ fbq('track', 'PageView');
 
         {/* ================= TIKTOK PIXEL ================= */}
 
-    <Script
-  id="tiktok-pixel"
-  strategy="lazyOnload"
+        <Script
+          id="tiktok-pixel"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
 !function (w, d, t) {
@@ -166,6 +175,7 @@ ttq.page();
         {/* ================= VERCEL SPEED ================= */}
 
         <SpeedInsights />
+
       </body>
     </html>
   )

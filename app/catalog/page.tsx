@@ -10,10 +10,12 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Product, Brand, Category } from '@/lib/types';
+
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import WhatsAppButton from '@/components/WhatsAppButton';
 import ProductCard from '@/components/ProductCard';
+
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -22,167 +24,296 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Search } from 'lucide-react';
 
 export default function CatalogPage() {
+
   const { t } = useLanguage();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [brands, setBrands] = useState<Map<string, Brand>>(new Map());
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterBrand, setFilterBrand] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
 
-  useEffect(() => {
+  const [products,setProducts] = useState<Product[]>([]);
+  const [filteredProducts,setFilteredProducts] = useState<Product[]>([]);
+
+  const [brands,setBrands] = useState<Map<string,Brand>>(new Map());
+  const [categories,setCategories] = useState<Category[]>([]);
+
+  const [loading,setLoading] = useState(true);
+
+  const [searchTerm,setSearchTerm] = useState('');
+  const [filterBrand,setFilterBrand] = useState('all');
+  const [filterCategory,setFilterCategory] = useState('all');
+
+  useEffect(()=>{
     fetchData();
-  }, []);
+  },[]);
 
-  useEffect(() => {
-    let filtered = products;
+  /* ================= FETCH DATA ================= */
 
-    if (searchTerm) {
-      filtered = filtered.filter((p) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const fetchData = async()=>{
+
+    try{
+
+      const productsQuery = query(
+        collection(db,'products'),
+        where('isActive','==',true),
+        orderBy('createdAt','desc')
       );
-    }
 
-    if (filterBrand !== 'all') {
-      filtered = filtered.filter((p) => p.brandId === filterBrand);
-    }
+      /* تحميل البيانات معاً لتحسين السرعة */
 
-    if (filterCategory !== 'all') {
-      filtered = filtered.filter((p) => p.categoryId === filterCategory);
-    }
+      const [
+        brandsSnapshot,
+        categoriesSnapshot,
+        productsSnapshot
+      ] = await Promise.all([
+        getDocs(collection(db,'brands')),
+        getDocs(collection(db,'categories')),
+        getDocs(productsQuery)
+      ]);
 
-    setFilteredProducts(filtered);
-  }, [searchTerm, filterBrand, filterCategory, products]);
-
-  const fetchData = async () => {
-    try {
       /* ================= BRANDS ================= */
-      const brandsSnapshot = await getDocs(collection(db, 'brands'));
-      const brandsMap = new Map<string, Brand>();
-      brandsSnapshot.forEach((doc) => {
-        brandsMap.set(doc.id, { id: doc.id, ...doc.data() } as Brand);
+
+      const brandsMap = new Map<string,Brand>();
+
+      brandsSnapshot.forEach((doc)=>{
+        brandsMap.set(
+          doc.id,
+          {id:doc.id,...doc.data()} as Brand
+        );
       });
+
       setBrands(brandsMap);
 
       /* ================= CATEGORIES ================= */
-      const categoriesSnapshot = await getDocs(collection(db, 'categories'));
-      const categoriesData = categoriesSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+
+      const categoriesData = categoriesSnapshot.docs.map((doc)=>({
+        id:doc.id,
+        ...doc.data()
       })) as Category[];
+
       setCategories(categoriesData);
 
-      /* ================= PRODUCTS (ORDERED 🔥) ================= */
-      const productsQuery = query(
-        collection(db, 'products'),
-        where('isActive', '==', true),
-        orderBy('createdAt', 'desc') // 🔥 الأحدث أولاً
-      );
+      /* ================= PRODUCTS ================= */
 
-      const productsSnapshot = await getDocs(productsQuery);
-      const productsData = productsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      const productsData = productsSnapshot.docs.map((doc)=>({
+        id:doc.id,
+        ...doc.data()
       })) as Product[];
 
       setProducts(productsData);
       setFilteredProducts(productsData);
 
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
+    }catch(error){
+
+      console.error('Error fetching data:',error);
+
+    }finally{
+
       setLoading(false);
+
     }
+
   };
 
-  if (loading) {
-    return (
+  /* ================= FILTER ================= */
+
+  useEffect(()=>{
+
+    const filtered = products.filter((p)=>{
+
+      if(
+        searchTerm &&
+        !p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      ){
+        return false;
+      }
+
+      if(
+        filterBrand !== 'all' &&
+        p.brandId !== filterBrand
+      ){
+        return false;
+      }
+
+      if(
+        filterCategory !== 'all' &&
+        p.categoryId !== filterCategory
+      ){
+        return false;
+      }
+
+      return true;
+
+    });
+
+    setFilteredProducts(filtered);
+
+  },[
+    searchTerm,
+    filterBrand,
+    filterCategory,
+    products
+  ]);
+
+  if(loading){
+
+    return(
+
       <div className="flex items-center justify-center min-h-screen bg-leather-beige">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-leather-brown"></div>
+
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-leather-brown"/>
+
       </div>
+
     );
+
   }
 
-  return (
+  return(
+
     <>
-      <Navbar />
+
+      <Navbar/>
+
       <main className="min-h-screen bg-leather-beige">
+
         <div className="container mx-auto px-4 py-8">
+
           <h1 className="text-4xl font-bold mb-8 text-leather-dark">
+
             {t('all_products')}
+
           </h1>
 
           <div className="bg-white rounded-lg shadow-md p-4 mb-8 border border-leather-light/20">
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"/>
+
                 <Input
                   placeholder={t('search')}
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e)=>setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
+
               </div>
 
-              <Select value={filterBrand} onValueChange={setFilterBrand}>
+              <Select
+                value={filterBrand}
+                onValueChange={setFilterBrand}
+              >
+
                 <SelectTrigger>
-                  <SelectValue placeholder={t('filter')} />
+
+                  <SelectValue placeholder={t('filter')}/>
+
                 </SelectTrigger>
+
                 <SelectContent>
-                  <SelectItem value="all">Toutes les marques</SelectItem>
-                  {Array.from(brands.values()).map((brand) => (
-                    <SelectItem key={brand.id} value={brand.id}>
+
+                  <SelectItem value="all">
+
+                    Toutes les marques
+
+                  </SelectItem>
+
+                  {Array.from(brands.values()).map((brand)=>(
+
+                    <SelectItem
+                      key={brand.id}
+                      value={brand.id}
+                    >
                       {brand.name}
                     </SelectItem>
+
                   ))}
+
                 </SelectContent>
+
               </Select>
 
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <Select
+                value={filterCategory}
+                onValueChange={setFilterCategory}
+              >
+
                 <SelectTrigger>
-                  <SelectValue placeholder={t('filter')} />
+
+                  <SelectValue placeholder={t('filter')}/>
+
                 </SelectTrigger>
+
                 <SelectContent>
-                  <SelectItem value="all">Toutes les catégories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
+
+                  <SelectItem value="all">
+
+                    Toutes les catégories
+
+                  </SelectItem>
+
+                  {categories.map((category)=>(
+
+                    <SelectItem
+                      key={category.id}
+                      value={category.id}
+                    >
                       {category.name}
                     </SelectItem>
+
                   ))}
+
                 </SelectContent>
+
               </Select>
 
             </div>
+
           </div>
 
           {filteredProducts.length === 0 ? (
+
             <div className="text-center py-12">
+
               <p className="text-xl text-gray-600">
+
                 {t('no_products')}
+
               </p>
+
             </div>
+
           ) : (
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {filteredProducts.map((product) => (
+
+              {filteredProducts.map((product)=>(
+
                 <ProductCard
                   key={product.id}
                   product={product}
                   brand={brands.get(product.brandId)}
                 />
+
               ))}
+
             </div>
+
           )}
+
         </div>
+
       </main>
-      <Footer />
-      <WhatsAppButton />
+
+      <Footer/>
+      <WhatsAppButton/>
+
     </>
+
   );
+
 }
