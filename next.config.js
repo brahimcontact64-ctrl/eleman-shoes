@@ -2,15 +2,17 @@
 
 const nextConfig = {
 
-images: {
-domains: [
-"firebasestorage.googleapis.com",
-"lh3.googleusercontent.com",
-],
-},
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+      }
+    ]
+  },
 
-reactStrictMode: true,
-compress: true,
+  reactStrictMode: true,
+  compress: true,
 
 }
 
