@@ -69,7 +69,7 @@ return(
 
 {/* IMAGE */}
 
-<Link href={`/product/${product.slug}`}>
+<Link href={`/checkout/${product.id}`}>
 
 <div className="relative aspect-[4/5] w-full bg-leather-beige">
 
@@ -118,7 +118,7 @@ className="object-cover"
 
 <div className="p-4">
 
-<Link href={`/product/${product.slug}`}>
+<Link href={`/checkout/${product.id}`}>
 
 <h3 className="font-semibold text-lg text-leather-dark hover:text-leather-brown transition line-clamp-1">
 {product.name}
