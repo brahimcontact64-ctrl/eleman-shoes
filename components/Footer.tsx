@@ -83,7 +83,7 @@ return(
 <div className="flex items-center gap-3 mb-4">
 
 <Image
-src={settings.logoUrl || '/okp.jpeg'}
+src={settings.logoUrl && settings.logoUrl.length > 0 ? settings.logoUrl : '/okp.jpeg'}
 alt={settings.companyName || 'logo'}
 width={160}
 height={60}
