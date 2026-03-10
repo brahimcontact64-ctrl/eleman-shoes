@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Product, Brand } from '@/lib/types'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -22,216 +22,190 @@ export default function ProductCard({
   brand,
   promotion,
   colorsMap = {}
-}: ProductCardProps) {
+}: ProductCardProps){
 
-  const { t } = useLanguage()
+const { t } = useLanguage()
 
-  const [selectedColorId,setSelectedColorId] = useState(
-    product.colors?.[0]?.colorId || null
-  )
+const [selectedColorId,setSelectedColorId] = useState(
+  product.colors?.[0]?.colorId
+)
 
-  /* ================= ACTIVE COLOR ================= */
+/* ACTIVE COLOR */
 
-  const activeColor = useMemo(()=>{
+const activeColor =
+product.colors?.find(c => c.colorId === selectedColorId) ||
+product.colors?.[0]
 
-    return (
-      product.colors?.find(c => c.colorId === selectedColorId) ||
-      product.colors?.[0]
-    )
+const firstImage = activeColor?.images?.[0]?.url
 
-  },[selectedColorId,product.colors])
+/* PRICE */
 
-  const firstImage = activeColor?.images?.[0]?.url || null
+const finalPrice = promotion?.newPrice ?? product.price
 
-  /* ================= PRICE ================= */
+/* WHATSAPP LINK */
 
-  const finalPrice = promotion?.newPrice ?? product.price
+const whatsappLink =
+"https://wa.me/?text=" +
+encodeURIComponent(
+"Bonjour, je suis intéressé par ce produit:\n" +
+product.name +
+"\nPrix: " +
+formatPrice(finalPrice)
+)
 
-  /* ================= WHATSAPP ================= */
+return(
 
-  const handleWhatsAppOrder = ()=>{
+<div className="group bg-white rounded-2xl border border-leather-light/20 overflow-hidden shadow-sm hover:shadow-xl transition">
 
-    const message =
-      "Bonjour, je suis intéressé par ce produit:\n" +
-      product.name +
-      "\nPrix: " +
-      formatPrice(finalPrice)
+{/* IMAGE */}
 
-    window.open(
-      "https://wa.me/?text=" + encodeURIComponent(message),
-      "_blank"
-    )
+<Link href={`/product/${product.slug}`}>
 
-  }
+<div className="relative aspect-[4/5] w-full bg-leather-beige">
 
-  return (
+{promotion &&(
 
-    <div className="group bg-white rounded-2xl border border-leather-light/20 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
+<div className="absolute top-3 left-3 z-20">
 
-      {/* IMAGE */}
+<Badge className="bg-red-500 text-white text-xs px-3 py-1 rounded-full">
+🔥 PROMO
+</Badge>
 
-      <Link href={`/product/${product.slug}`}>
+</div>
 
-        <div className="relative aspect-[4/5] w-full bg-leather-beige overflow-hidden">
+)}
 
-          {/* PROMO BADGE */}
+{brand &&(
 
-          {promotion && (
+<div className="absolute bottom-3 right-3 z-20">
 
-            <div className="absolute top-3 left-3 z-20">
+<Badge className="bg-white/90 text-leather-dark border px-2 py-1 text-xs rounded-full">
+{brand.name}
+</Badge>
 
-              <Badge className="bg-red-500 text-white text-xs px-3 py-1 rounded-full shadow">
-                🔥 PROMO
-              </Badge>
+</div>
 
-            </div>
+)}
 
-          )}
+{firstImage &&(
 
-          {/* BRAND */}
+<Image
+src={firstImage}
+alt={product.name}
+fill
+sizes="(max-width:768px) 50vw, (max-width:1200px) 33vw, 25vw"
+quality={60}
+loading="lazy"
+className="object-cover"
+/>
 
-          {brand && (
+)}
 
-            <div className="absolute bottom-3 right-3 z-20">
+</div>
 
-              <Badge className="bg-white/90 text-leather-dark border px-2 py-1 text-xs rounded-full backdrop-blur">
-                {brand.name}
-              </Badge>
+</Link>
 
-            </div>
+{/* CONTENT */}
 
-          )}
+<div className="p-4">
 
-          {/* IMAGE */}
+<Link href={`/product/${product.slug}`}>
 
-          {firstImage && (
+<h3 className="font-semibold text-lg text-leather-dark hover:text-leather-brown transition line-clamp-1">
+{product.name}
+</h3>
 
-            <Image
-              src={firstImage}
-              alt={product.name}
-              fill
-              sizes="(max-width:768px) 50vw, (max-width:1200px) 33vw, 25vw"
-              quality={60}
-              loading="lazy"
-              className="object-cover"
-            />
+</Link>
 
-          )}
+<div className="mb-3 mt-2">
 
-        </div>
+<p className="text-2xl font-bold text-leather-brown">
+{formatPrice(finalPrice)}
+</p>
 
-      </Link>
+{promotion &&(
 
-      {/* CONTENT */}
+<p className="text-sm text-gray-400 line-through">
+{formatPrice(product.price)}
+</p>
 
-      <div className="p-4">
+)}
 
-        {/* TITLE */}
+</div>
 
-        <div className="flex items-center justify-between mb-2">
+{/* COLORS */}
 
-          <Link href={`/product/${product.slug}`}>
+{product.colors?.length>0 &&(
 
-            <h3 className="font-semibold text-lg text-leather-dark hover:text-leather-brown transition line-clamp-1">
-              {product.name}
-            </h3>
+<div className="mb-4">
 
-          </Link>
+<div className="flex gap-2 flex-wrap">
 
-        </div>
+{product.colors.slice(0,5).map(color=>(
 
-        {/* PRICE */}
+<button
+key={color.colorId}
+type="button"
+onClick={(e)=>{
+e.preventDefault()
+setSelectedColorId(color.colorId)
+}}
+className={`w-6 h-6 rounded-full border-2
+${
+selectedColorId === color.colorId
+? "border-leather-brown scale-110"
+: "border-gray-300"
+}`}
+style={{
+backgroundColor: colorsMap[color.name] || "#ccc"
+}}
+/>
 
-        <div className="mb-3 min-h-[50px]">
+))}
 
-          <p className="text-2xl font-bold text-leather-brown">
-            {formatPrice(finalPrice)}
-          </p>
+</div>
 
-          {promotion && (
+</div>
 
-            <p className="text-sm text-gray-400 line-through">
-              {formatPrice(product.price)}
-            </p>
+)}
 
-          )}
+{/* ACTIONS */}
 
-        </div>
+<div className="space-y-2">
 
-        {/* COLORS */}
+<Link href={`/checkout/${product.id}`}>
 
-        {product.colors?.length > 0 && (
+<Button
+className="w-full bg-leather-brown hover:bg-leather-coffee text-white"
+size="lg"
+>
+{t('order')}
+</Button>
 
-          <div className="mb-4">
+</Link>
 
-            <p className="text-xs text-gray-500 mb-2">
-              Couleurs disponibles
-            </p>
+<a href={whatsappLink} target="_blank">
 
-            <div className="flex gap-2 flex-wrap">
+<Button
+variant="outline"
+className="w-full border-leather-brown text-leather-brown hover:bg-leather-brown hover:text-white"
+size="lg"
+>
 
-              {product.colors.slice(0,5).map(color => (
+<MessageCircle className="h-4 w-4 mr-2"/>
 
-                <button
-                  key={color.colorId}
-                  type="button"
-                  onClick={(e)=>{
-                    e.preventDefault()
-                    setSelectedColorId(color.colorId)
-                  }}
-                  className={`w-6 h-6 rounded-full border-2 transition-all duration-200
-                  ${
-                    selectedColorId === color.colorId
-                      ? "border-leather-brown scale-110"
-                      : "border-gray-300"
-                  }`}
-                  style={{
-                    backgroundColor: colorsMap[color.name] || "#ccc"
-                  }}
-                />
+{t('whatsapp_order')}
 
-              ))}
+</Button>
 
-            </div>
+</a>
 
-          </div>
+</div>
 
-        )}
+</div>
 
-        {/* ACTIONS */}
+</div>
 
-        <div className="space-y-2">
-
-          <Link href={`/checkout/${product.id}`}>
-
-            <Button
-              className="w-full bg-leather-brown hover:bg-leather-coffee text-white"
-              size="lg"
-            >
-              {t('order')}
-            </Button>
-
-          </Link>
-
-          <Button
-            variant="outline"
-            className="w-full border-leather-brown text-leather-brown hover:bg-leather-brown hover:text-white"
-            size="lg"
-            onClick={handleWhatsAppOrder}
-          >
-
-            <MessageCircle className="h-4 w-4 mr-2" />
-
-            {t('whatsapp_order')}
-
-          </Button>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  )
+)
 
 }
