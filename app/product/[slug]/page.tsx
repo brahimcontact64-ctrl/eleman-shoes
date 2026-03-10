@@ -56,8 +56,6 @@ export default function ProductPage({ params }: ProductPageProps) {
 
       try{
 
-        /* PRODUCT */
-
         const productSnap = await getDocs(
           query(
             collection(db,'products'),
@@ -79,16 +77,19 @@ export default function ProductPage({ params }: ProductPageProps) {
 
         setProduct(p)
 
-        /* PROMOTION */
+        /* 🔥 تحميل promotion و brand معاً */
 
-        const promoSnap = await getDocs(
-          query(
-            collection(db,'promotions'),
-            where('productId','==',p.id),
-            where('active','==',true),
-            limit(1)
-          )
+        const promoQuery = query(
+          collection(db,'promotions'),
+          where('productId','==',p.id),
+          where('active','==',true),
+          limit(1)
         )
+
+        const [promoSnap,brandSnap] = await Promise.all([
+          getDocs(promoQuery),
+          getDoc(doc(db,'brands',p.brandId))
+        ])
 
         if(!promoSnap.empty){
           setPromotion({
@@ -97,18 +98,12 @@ export default function ProductPage({ params }: ProductPageProps) {
           })
         }
 
-        /* BRAND */
-
-        const brandSnap = await getDoc(doc(db,'brands',p.brandId))
-
         if(brandSnap.exists()){
           setBrand({
             id: brandSnap.id,
             ...brandSnap.data()
           } as Brand)
         }
-
-        /* DEFAULT COLOR */
 
         if(p.colors && p.colors.length>0){
           setSelectedColorId(p.colors[0].colorId)
@@ -126,7 +121,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   },[params.slug])
 
-  /* ================= PIXEL TRACKING ================= */
+  /* ================= PIXEL ================= */
 
   useEffect(()=>{
 
@@ -158,8 +153,6 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   },[product])
 
-  /* ================= HELPERS ================= */
-
   const selectedColor = product?.colors?.find(
     c=>c.colorId === selectedColorId
   )
@@ -179,9 +172,7 @@ export default function ProductPage({ params }: ProductPageProps) {
     const msg =
       `Bonjour, je suis intéressé par ce produit:\n` +
       `${product.name}\n` +
-      `Prix: ${formatPrice(finalPrice)}\n` +
-      (selectedSize ? `Pointure: ${selectedSize}\n` : '') +
-      (selectedColor ? `Couleur: ${selectedColor.name}` : '')
+      `Prix: ${formatPrice(finalPrice)}`
 
     window.open(
       'https://wa.me/?text='+encodeURIComponent(msg),
@@ -189,8 +180,6 @@ export default function ProductPage({ params }: ProductPageProps) {
     )
 
   }
-
-  /* ================= LOADING ================= */
 
   if(loading){
 
@@ -205,8 +194,6 @@ export default function ProductPage({ params }: ProductPageProps) {
     )
 
   }
-
-  /* ================= NOT FOUND ================= */
 
   if(!product){
 
@@ -234,8 +221,6 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   }
 
-  /* ================= UI ================= */
-
   return(
 
     <>
@@ -254,23 +239,21 @@ export default function ProductPage({ params }: ProductPageProps) {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white rounded-lg shadow-md p-6">
 
-            {/* IMAGES */}
-
             <div>
 
-             <div className="relative aspect-square bg-gray-100 rounded-lg mb-4">
+              <div className="relative aspect-square bg-gray-100 rounded-lg mb-4">
 
                 {images[selectedImageIndex] &&(
 
-                 <Image
-  src={images[selectedImageIndex]}
-  alt={product.name}
-  fill
-  priority
-  sizes="(max-width:768px) 100vw, 50vw"
-  quality={70}
-  className="object-cover rounded-lg"
-/>
+                  <Image
+                    src={images[selectedImageIndex]}
+                    alt={product.name}
+                    fill
+                    priority
+                    sizes="(max-width:768px) 100vw, 50vw"
+                    quality={70}
+                    className="object-cover rounded-lg"
+                  />
 
                 )}
 
@@ -292,15 +275,16 @@ export default function ProductPage({ params }: ProductPageProps) {
                       }`}
                     >
 
-                     <Image
-  src={img}
-  alt={`Image ${i+1}`}
-  fill
-  loading="lazy"
-  sizes="100px"
-  quality={40}
-  className="object-cover rounded"
-/>
+                      <Image
+                        src={img}
+                        alt={`Image ${i+1}`}
+                        fill
+                        loading="lazy"
+                        sizes="100px"
+                        quality={40}
+                        className="object-cover rounded"
+                      />
+
                     </div>
 
                   ))}
@@ -311,171 +295,21 @@ export default function ProductPage({ params }: ProductPageProps) {
 
             </div>
 
-            {/* INFO */}
-
             <div>
-
-              <div className="flex gap-2 mb-2">
-
-                {brand && <Badge>{brand.name}</Badge>}
-
-                <Badge variant="outline">
-                  {t('available')}
-                </Badge>
-
-              </div>
 
               <h1 className="text-3xl font-bold mb-4">
                 {product.name}
               </h1>
 
-              <div className="mb-6">
+              <p className="text-4xl font-bold mb-6">
+                {formatPrice(finalPrice)}
+              </p>
 
-                {promotion &&(
-
-                  <Badge className="bg-red-500 text-white mb-2">
-                    DA {promotion.discount} OFF
-                  </Badge>
-
-                )}
-
-                <p className="text-4xl font-bold">
-
-                  {formatPrice(finalPrice)}
-
-                </p>
-
-                {promotion &&(
-
-                  <p className="text-lg text-gray-400 line-through">
-                    {formatPrice(promotion.oldPrice)}
-                  </p>
-
-                )}
-
-              </div>
-
-              {/* SIZES */}
-
-             {(product.sizes ?? []).length > 0 && (
-
-                <div className="mb-6">
-
-                  <h3 className="font-semibold mb-2">
-                    {t('sizes')}
-                  </h3>
-
-                  <div className="flex flex-wrap gap-2">
-
-                    {(product.sizes ?? []).map(size => (
-
-                      <button
-                        key={size}
-                        onClick={()=>setSelectedSize(size)}
-                        className={`px-4 py-2 rounded-lg border-2 ${
-                          selectedSize===size
-                          ? 'bg-gray-900 text-white border-gray-900'
-                          : 'border-gray-300'
-                        }`}
-                      >
-                        {size}
-                      </button>
-
-                    ))}
-
-                  </div>
-
-                </div>
-
-              )}
-
-              {/* COLORS */}
-
-              {product.colors?.length>0 &&(
-
-                <div className="mb-6">
-
-                  <h3 className="font-semibold mb-2">
-                    Couleurs
-                  </h3>
-
-                  <div className="flex flex-wrap gap-3">
-
-                    {product.colors.map(color=>(
-
-                      <button
-                        key={color.colorId}
-                        onClick={()=>{
-                          setSelectedColorId(color.colorId)
-                          setSelectedImageIndex(0)
-                        }}
-                        className={`px-3 py-2 rounded-lg border-2 ${
-                          selectedColorId===color.colorId
-                          ? 'border-gray-900'
-                          : 'border-gray-300'
-                        }`}
-                      >
-                        {color.name}
-                      </button>
-
-                    ))}
-
-                  </div>
-
-                </div>
-
-              )}
-
-              {/* DESCRIPTION */}
-
-              {product.description &&(
-
-                <div className="mb-6">
-
-                  <h3 className="font-semibold mb-2">
-                    {t('description')}
-                  </h3>
-
-                  <p className="text-gray-600">
-                    {product.description}
-                  </p>
-
-                </div>
-
-              )}
-
-              {/* ACTIONS */}
-
-              <div className="space-y-3">
-
-                <Link
-                  href={`/checkout/${product.id}?size=${selectedSize ?? ''}&color=${selectedColorId ?? ''}`}
-                >
-
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    disabled={!selectedSize || !selectedColorId}
-                  >
-                    {t('order')}
-                  </Button>
-
-                </Link>
-
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  size="lg"
-                  onClick={handleWhatsAppOrder}
-                >
-
-                  <MessageCircle className="h-4 w-4 mr-2"/>
-
-                  {t('whatsapp_order')}
-
+              <Link href={`/checkout/${product.id}`}>
+                <Button size="lg" className="w-full">
+                  {t('order')}
                 </Button>
-
-              </div>
+              </Link>
 
             </div>
 
