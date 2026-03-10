@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
+import ProductCard from '@/components/ProductCard'
 import { useEffect, useState } from 'react'
 import {
   collection,
@@ -27,9 +27,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Truck, Shield, Star, Zap } from 'lucide-react'
 
-const ProductCard = dynamic(() => import('@/components/ProductCard'), {
-  ssr: false,
-})
 
 interface SiteSettings {
   heroImage: string
@@ -75,41 +72,39 @@ export default function Home() {
 
         /* ================= COLORS ================= */
 
-        const colorsSnap = await getDocs(collection(db, 'colors'))
+     const [
+  settingsDoc,
+  brandsSnapshot,
+  promotionsSnapshot,
+  categoriesSnapshot,
+  colorsSnap,
+] = await Promise.all([
+  getDoc(doc(db, 'site_settings', 'main')),
+  getDocs(collection(db, 'brands')),
+  getDocs(
+    query(
+      collection(db, 'promotions'),
+      where('active', '==', true)
+    )
+  ),
+  getDocs(
+    query(
+      collection(db, 'categories'),
+      where('__name__', 'in', categoryIds)
+    )
+  ),
+  getDocs(collection(db, 'colors')),
+])
 
-        const colors: Record<string, string> = {}
+const colors: Record<string, string> = {}
 
-        colorsSnap.forEach(doc => {
-          const data = doc.data()
-          colors[data.name] = data.hexCode
-        })
+colorsSnap.forEach(doc => {
+  const data = doc.data()
+  colors[data.name] = data.hexCode
+})
 
-        setColorsMap(colors)
-
-        /* ================= FETCH DATA ================= */
-
-        const [
-          settingsDoc,
-          brandsSnapshot,
-          promotionsSnapshot,
-          categoriesSnapshot,
-        ] = await Promise.all([
-          getDoc(doc(db, 'site_settings', 'main')),
-          getDocs(collection(db, 'brands')),
-          getDocs(
-            query(
-              collection(db, 'promotions'),
-              where('active', '==', true)
-            )
-          ),
-          getDocs(
-            query(
-              collection(db, 'categories'),
-              where('__name__', 'in', categoryIds)
-            )
-          ),
-        ])
-
+setColorsMap(colors)
+        
         /* ================= SETTINGS ================= */
 
         if (settingsDoc.exists()) {
@@ -193,7 +188,7 @@ export default function Home() {
   return (
     <>
       <Navbar />
-      <PromoBanner />
+      
 
       <main className="bg-leather-beige">
 
