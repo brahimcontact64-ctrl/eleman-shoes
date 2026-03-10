@@ -3,30 +3,28 @@
 const nextConfig = {
 
   images: {
-
-    /* السماح لصور Firebase */
-
     domains: [
       "firebasestorage.googleapis.com"
     ],
-
-    /* تحسين تحميل الصور */
-
     formats: ["image/avif", "image/webp"],
-
-    /* منع layout shift */
-
     minimumCacheTTL: 60,
-
   },
 
-  /* تحسين الأداء */
-
   reactStrictMode: true,
-
-  /* ضغط الملفات */
-
   compress: true,
+
+  async rewrites() {
+    return [
+      {
+        source: "/admin",
+        destination: "/app-admin/admin/dashboard"
+      },
+      {
+        source: "/admin/:path*",
+        destination: "/app-admin/admin/:path*"
+      }
+    ]
+  }
 
 }
 
