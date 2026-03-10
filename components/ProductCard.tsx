@@ -37,10 +37,9 @@ product.colors?.find(c => c.colorId === selectedColorId) ||
 product.colors?.[0]
 
 const firstImage =
+product?.colors?.[0]?.images?.[0]?.url ||
 activeColor?.images?.[0]?.url ||
-product.images?.[0] ||
-null
-
+'/placeholder.png'
 /* PRICE */
 
 const finalPrice = promotion?.newPrice ?? product.price
