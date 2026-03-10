@@ -19,7 +19,8 @@ import {
   Ruler,
   Palette,
   Award,
-  Tag
+  Tag,
+  Pencil
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -54,6 +55,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { href: '/admin/colors', icon: Palette, label: 'Couleurs', adminOnly: true },
 
     { href: '/admin/orders', icon: ShoppingCart, label: 'Commandes', permission: 'canManageOrders' },
+
+    // 👇 الصفحة الجديدة
+    { href: '/admin/modifications', icon: Pencil, label: 'Modifications commandes', permission: 'canManageOrders' },
 
     { href: '/admin/invoices', icon: FileText, label: 'Factures', permission: 'canManageInvoices' },
 

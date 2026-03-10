@@ -12,6 +12,7 @@ const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-inter',
+  preload: true,
 })
 
 /* ================= VIEWPORT ================= */
@@ -89,7 +90,7 @@ export default function RootLayout({
       >
         {/* ================= META PIXEL ================= */}
 
-        <Script id="meta-pixel" strategy="afterInteractive">
+       <Script id="meta-pixel" strategy="lazyOnload">
           {`
 !function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -108,9 +109,9 @@ fbq('track', 'PageView');
 
         {/* ================= TIKTOK PIXEL ================= */}
 
-        <Script
-          id="tiktok-pixel"
-          strategy="afterInteractive"
+    <Script
+  id="tiktok-pixel"
+  strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
 !function (w, d, t) {

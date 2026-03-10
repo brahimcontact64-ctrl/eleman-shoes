@@ -258,18 +258,19 @@ export default function ProductPage({ params }: ProductPageProps) {
 
             <div>
 
-              <div className="relative h-96 bg-gray-100 rounded-lg mb-4">
+             <div className="relative aspect-square bg-gray-100 rounded-lg mb-4">
 
                 {images[selectedImageIndex] &&(
 
-                  <Image
-                    src={images[selectedImageIndex]}
-                    alt={product.name}
-                    fill
-                    sizes="(max-width:768px) 100vw, 50vw"
-                    quality={60}
-                    className="object-cover rounded-lg"
-                  />
+                 <Image
+  src={images[selectedImageIndex]}
+  alt={product.name}
+  fill
+  priority
+  sizes="(max-width:768px) 100vw, 50vw"
+  quality={70}
+  className="object-cover rounded-lg"
+/>
 
                 )}
 
@@ -291,15 +292,15 @@ export default function ProductPage({ params }: ProductPageProps) {
                       }`}
                     >
 
-                      <Image
-                        src={img}
-                        alt={`Image ${i+1}`}
-                        fill
-                        sizes="100px"
-                        quality={50}
-                        className="object-cover rounded"
-                      />
-
+                     <Image
+  src={img}
+  alt={`Image ${i+1}`}
+  fill
+  loading="lazy"
+  sizes="100px"
+  quality={40}
+  className="object-cover rounded"
+/>
                     </div>
 
                   ))}
