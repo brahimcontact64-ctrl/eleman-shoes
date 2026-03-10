@@ -36,9 +36,17 @@ const activeColor =
 product.colors?.find(c => c.colorId === selectedColorId) ||
 product.colors?.[0]
 
+const getImage = (img:any) => {
+  if(!img) return null
+  if(typeof img === "string") return img
+  if(img.url) return img.url
+  return null
+}
+
 const firstImage =
-product?.colors?.[0]?.images?.[0]?.url ||
-activeColor?.images?.[0]?.url ||
+getImage(activeColor?.images?.[0]) ||
+getImage(product?.colors?.[0]?.images?.[0]) ||
+getImage(product?.images?.[0]) ||
 '/placeholder.png'
 /* PRICE */
 
