@@ -244,6 +244,7 @@ export default function Home() {
             </div>
           </div>
         </section>
+        
 
         {/* PRODUCTS */}
 
@@ -260,17 +261,9 @@ export default function Home() {
               <p className="text-xl text-leather-gray mb-6">
                 Découvrez nos meilleures ventes
               </p>
+              <PromoBanner />
 
-              <Link href="/catalog">
-
-                <Button
-                  variant="outline"
-                  className="border-leather-brown text-leather-brown hover:bg-leather-brown hover:text-white transition-all px-6"
-                >
-                  Voir tout →
-                </Button>
-
-              </Link>
+              
 
             </div>
 
@@ -288,34 +281,50 @@ export default function Home() {
 
               <div className="space-y-16">
 
-                {categoryProducts.map((section, index) => (
+              {categoryProducts.map((section, index) => (
 
-                  <div key={index}>
+<div key={index}>
 
-                    <h2 className="text-3xl font-bold mb-8 text-leather-dark text-center">
-                      {section.categoryName}
-                    </h2>
+<h2 className="text-3xl font-bold mb-8 text-leather-dark text-center">
+{section.categoryName}
+</h2>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                      {section.products.map(product => (
+{section.products.map(product => (
 
-                        <ProductCard
-                          key={product.id}
-                          product={product}
-                          brand={brands.get(product.brandId)}
-                          promotion={promotions?.[product.id]}
-                          colorsMap={colorsMap}
-                        />
+<ProductCard
+key={product.id}
+product={product}
+brand={brands.get(product.brandId)}
+promotion={promotions?.[product.id]}
+colorsMap={colorsMap}
+/>
 
-                      ))}
+))}
 
-                    </div>
+</div>
 
-                  </div>
+{/* VOIR TOUT BUTTON */}
 
-                ))}
+<div className="text-center mt-8">
 
+<Link href={`/catalog?category=${section.categoryName}`}>
+
+<Button
+variant="outline"
+className="border-leather-brown text-leather-brown hover:bg-leather-brown hover:text-white transition-all px-6"
+>
+Voir tout →
+</Button>
+
+</Link>
+
+</div>
+
+</div>
+
+))}
               </div>
 
             )}

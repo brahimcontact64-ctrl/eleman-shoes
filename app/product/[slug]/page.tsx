@@ -356,7 +356,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
               {/* SIZES */}
 
-              {product.sizes?.length>0 &&(
+             {(product.sizes ?? []).length > 0 && (
 
                 <div className="mb-6">
 
@@ -366,7 +366,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
                   <div className="flex flex-wrap gap-2">
 
-                    {product.sizes.map(size=>(
+                    {(product.sizes ?? []).map(size => (
 
                       <button
                         key={size}
