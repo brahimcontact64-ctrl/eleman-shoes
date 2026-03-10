@@ -26,25 +26,22 @@ export default function ProductCard({
 
   const { t } = useLanguage()
 
-  const [hovered, setHovered] = useState(false)
-
-  const [selectedColorId, setSelectedColorId] = useState(
+  const [selectedColorId,setSelectedColorId] = useState(
     product.colors?.[0]?.colorId || null
   )
 
   /* ================= ACTIVE COLOR ================= */
 
-  const activeColor = useMemo(() => {
+  const activeColor = useMemo(()=>{
+
     return (
       product.colors?.find(c => c.colorId === selectedColorId) ||
       product.colors?.[0]
     )
-  }, [selectedColorId, product.colors])
 
-  const images = activeColor?.images || []
+  },[selectedColorId,product.colors])
 
-  const firstImage = images?.[0]?.url || null
-  const secondImage = images?.[1]?.url || firstImage
+  const firstImage = activeColor?.images?.[0]?.url || null
 
   /* ================= PRICE ================= */
 
@@ -52,7 +49,7 @@ export default function ProductCard({
 
   /* ================= WHATSAPP ================= */
 
-  const handleWhatsAppOrder = () => {
+  const handleWhatsAppOrder = ()=>{
 
     const message =
       "Bonjour, je suis intéressé par ce produit:\n" +
@@ -64,6 +61,7 @@ export default function ProductCard({
       "https://wa.me/?text=" + encodeURIComponent(message),
       "_blank"
     )
+
   }
 
   return (
@@ -74,13 +72,7 @@ export default function ProductCard({
 
       <Link href={`/product/${product.slug}`}>
 
-        <div
-          className="relative h-64 bg-leather-beige overflow-hidden"
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-          onTouchStart={() => setHovered(true)}
-          onTouchEnd={() => setHovered(false)}
-        >
+        <div className="relative aspect-[4/5] w-full bg-leather-beige overflow-hidden">
 
           {/* PROMO BADGE */}
 
@@ -110,43 +102,21 @@ export default function ProductCard({
 
           )}
 
-          {/* IMAGES */}
+          {/* IMAGE */}
 
-          <div className="relative w-full h-full">
+          {firstImage && (
 
-            {firstImage && (
+            <Image
+              src={firstImage}
+              alt={product.name}
+              fill
+              sizes="(max-width:768px) 50vw, (max-width:1200px) 33vw, 25vw"
+              quality={60}
+              loading="lazy"
+              className="object-cover"
+            />
 
-              <Image
-                src={firstImage}
-                alt={product.name}
-                fill
-                sizes="(max-width:768px) 100vw, 25vw"
-                quality={50}
-                priority={false}
-                loading="lazy"
-                className={`object-cover transition-all duration-500 ease-out
-                ${hovered ? "opacity-0 scale-105" : "opacity-100 scale-100"}`}
-              />
-
-            )}
-
-            {secondImage && (
-
-              <Image
-                src={secondImage}
-                alt={product.name}
-                fill
-                sizes="(max-width:768px) 100vw, 25vw"
-                quality={50}
-                priority={false}
-                loading="lazy"
-                className={`object-cover transition-all duration-500 ease-out
-                ${hovered ? "opacity-100 scale-100" : "opacity-0 scale-105"}`}
-              />
-
-            )}
-
-          </div>
+          )}
 
         </div>
 
@@ -207,7 +177,6 @@ export default function ProductCard({
                   type="button"
                   onClick={(e)=>{
                     e.preventDefault()
-                    setHovered(false)
                     setSelectedColorId(color.colorId)
                   }}
                   className={`w-6 h-6 rounded-full border-2 transition-all duration-200
