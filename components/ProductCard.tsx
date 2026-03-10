@@ -36,7 +36,10 @@ const activeColor =
 product.colors?.find(c => c.colorId === selectedColorId) ||
 product.colors?.[0]
 
-const firstImage = activeColor?.images?.[0]?.url
+const firstImage =
+activeColor?.images?.[0]?.url ||
+product.images?.[0] ||
+null
 
 /* PRICE */
 
