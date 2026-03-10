@@ -2,31 +2,15 @@
 
 const nextConfig = {
 
-  images: {
+images: {
+domains: [
+"firebasestorage.googleapis.com",
+"lh3.googleusercontent.com",
+],
+},
 
-    /* السماح لصور Firebase */
-
-    domains: [
-      "firebasestorage.googleapis.com"
-    ],
-
-    /* تحسين تحميل الصور */
-
-    formats: ["image/avif", "image/webp"],
-
-    /* منع layout shift */
-
-    minimumCacheTTL: 60,
-
-  },
-
-  /* تحسين الأداء */
-
-  reactStrictMode: true,
-
-  /* ضغط الملفات */
-
-  compress: true,
+reactStrictMode: true,
+compress: true,
 
 }
 
