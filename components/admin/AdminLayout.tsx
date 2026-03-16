@@ -55,6 +55,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { href: '/admin/colors', icon: Palette, label: 'Couleurs', adminOnly: true },
 
     { href: '/admin/orders', icon: ShoppingCart, label: 'Commandes', permission: 'canManageOrders' },
+    { href: '/admin/analytics', icon: FileBarChart, label: 'Analytics', adminOnly: true },
 
     // 👇 الصفحة الجديدة
     { href: '/admin/modifications', icon: Pencil, label: 'Modifications commandes', permission: 'canManageOrders' },

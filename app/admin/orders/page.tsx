@@ -42,6 +42,33 @@ import { Badge } from '@/components/ui/badge';
 import { formatPrice } from '@/lib/firebase/utils';
 import { Eye, Filter } from 'lucide-react';
 import { toast } from 'sonner';
+const timeAgo = (timestamp:any)=>{
+  if(!timestamp) return ""
+
+  const now = Date.now()
+  const orderTime = timestamp.seconds * 1000
+  const diff = Math.floor((now - orderTime) / 1000)
+
+  
+  if(diff > 21600) return ""
+
+  if(diff < 60) return `il y a ${diff}s`
+  if(diff < 3600) return `il y a ${Math.floor(diff/60)} min`
+  return `il y a ${Math.floor(diff/3600)} h`
+}
+
+
+const formatDateFR = (timestamp: any) => {
+  if (!timestamp) return "-";
+  const date = new Date(timestamp.seconds * 1000);
+
+  return date.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+};
 
 export default function AdminOrdersPage() {
   const { user } = useAuth();
@@ -49,7 +76,7 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-
+const [note,setNote] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -188,22 +215,36 @@ const deliveryBadge = (status: DeliveryStatus) => {
           <Card className="p-6">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>N°</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Produit</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Livraison</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
+<TableRow>
+<TableHead>N°</TableHead>
+<TableHead>Date</TableHead>
+<TableHead>Client</TableHead>
+<TableHead>Produit</TableHead>
+<TableHead>Total</TableHead>
+<TableHead>Statut</TableHead>
+<TableHead>Livraison</TableHead>
+<TableHead>Actions</TableHead>
+</TableRow>
               </TableHeader>
 
               <TableBody>
                 {filteredOrders.map(order => (
-                  <TableRow key={order.id}>
-                    <TableCell>{order.orderNumber}</TableCell>
-                    <TableCell>
+                 <TableRow key={order.id}>
+<TableCell>{order.orderNumber}</TableCell>
+
+<TableCell className="capitalize space-y-1">
+
+<div>{formatDateFR(order.createdAt)}</div>
+
+<div className="text-xs text-green-600">
+{timeAgo(order.createdAt) && (
+<div className="text-xs text-green-600">
+🟢 {timeAgo(order.createdAt)}
+</div>
+)}
+</div>
+
+</TableCell>                <TableCell>
                       <div className="font-medium">{order.customer.fullName}</div>
                       <div className="text-xs text-gray-600">{order.customer.phone}</div>
                     </TableCell>
@@ -219,10 +260,11 @@ const deliveryBadge = (status: DeliveryStatus) => {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          setSelectedOrder(order);
-                          setDialogOpen(true);
-                        }}
+                       onClick={() => {
+  setSelectedOrder(order);
+  setNote(order.notes || "");
+  setDialogOpen(true);
+}}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -290,9 +332,8 @@ const deliveryBadge = (status: DeliveryStatus) => {
                       </span>
                     </div>
                   </div>
-
-                  {/* STATUS */}
-                  <div className="space-y-2">
+{/* STATUS */}
+<div className="space-y-2">
                     <strong>Statut commande</strong>
                     <Select
                       value={selectedOrder.status}
@@ -334,7 +375,32 @@ const deliveryBadge = (status: DeliveryStatus) => {
                       </SelectContent>
                     </Select>
                   </div>
+<div className="space-y-2 border rounded-md p-3">
+  <strong>📝 Note interne</strong>
 
+  <textarea
+    value={note}
+    onChange={(e) => setNote(e.target.value)}
+    placeholder="ex: client a changé la couleur, pointure 42 au lieu de 41..."
+    className="w-full min-h-[120px] border rounded-md p-3 text-sm"
+  />
+
+  <Button
+    type="button"
+    size="sm"
+    onClick={() => {
+      if (!selectedOrder) return;
+
+      updateOrderField(
+        selectedOrder.id!,
+        { notes: note } as Partial<Order>,
+        { notes: note }
+      );
+    }}
+  >
+    Sauvegarder note
+  </Button>
+</div>
                 </div>
               )}
             </DialogContent>
