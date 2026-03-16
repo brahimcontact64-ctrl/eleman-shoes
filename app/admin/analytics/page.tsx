@@ -44,8 +44,8 @@ const [salesPerDay,setSalesPerDay] = useState<any[]>([])
 const [topProducts,setTopProducts] = useState<any[]>([])
 const [ordersByWilaya,setOrdersByWilaya] = useState<any[]>([])
 const [ordersByHour,setOrdersByHour] = useState<any[]>([])
-
 const [weekdaySales,setWeekdaySales] = useState<any[]>([])
+
 const [bestDay,setBestDay] = useState("")
 const [worstDay,setWorstDay] = useState("")
 
@@ -80,7 +80,6 @@ const productMap:any = {}
 const wilayaMap:any = {}
 const hourMap:any = {}
 const weekdayMap:any = {}
-
 const todayProductMap:any = {}
 
 data.forEach(o=>{
@@ -93,7 +92,6 @@ if(date.toDateString() === todayDate){
 today++
 
 const name = o.product?.name || "Unknown"
-
 if(!todayProductMap[name]) todayProductMap[name]=0
 todayProductMap[name]++
 }
@@ -113,17 +111,14 @@ weekdayMap[weekday].orders++
 weekdayMap[weekday].revenue+=o.total
 
 const product = o.product?.name || "Unknown"
-
 if(!productMap[product]) productMap[product]=0
 productMap[product]++
 
 const wilaya = o.customer?.wilaya || "Unknown"
-
 if(!wilayaMap[wilaya]) wilayaMap[wilaya]=0
 wilayaMap[wilaya]++
 
 const hour = date.getHours()
-
 if(!hourMap[hour]) hourMap[hour]=0
 hourMap[hour]++
 
@@ -233,64 +228,68 @@ return(
 
 <AdminLayout>
 
-<div className="space-y-10">
+<div className="space-y-6 px-3 md:px-6">
 
-<h1 className="text-3xl font-bold">📊 Analytics</h1>
+<h1 className="text-2xl md:text-3xl font-bold">📊 Analytics</h1>
 
-<div className="grid grid-cols-4 gap-6">
+{/* STATS */}
 
-<Card className="p-6">
-<p>Total commandes</p>
-<p className="text-3xl font-bold">{totalOrders}</p>
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+<Card className="p-4">
+<p className="text-sm text-gray-500">Total commandes</p>
+<p className="text-2xl md:text-3xl font-bold">{totalOrders}</p>
 </Card>
 
-<Card className="p-6">
-<p>Total ventes</p>
-<p className="text-3xl font-bold">{formatPrice(totalRevenue)}</p>
+<Card className="p-4">
+<p className="text-sm text-gray-500">Total ventes</p>
+<p className="text-2xl md:text-3xl font-bold">{formatPrice(totalRevenue)}</p>
 </Card>
 
-<Card className="p-6">
-<p>Commandes Aujourd&apos;hui</p>
-<p className="text-3xl font-bold">{todayOrders}</p>
+<Card className="p-4">
+<p className="text-sm text-gray-500">Commandes Aujourd&apos;hui</p>
+<p className="text-2xl md:text-3xl font-bold">{todayOrders}</p>
 </Card>
 
-<Card className="p-6">
-<p>Panier moyen</p>
-<p className="text-3xl font-bold">{formatPrice(avgOrder)}</p>
+<Card className="p-4">
+<p className="text-sm text-gray-500">Panier moyen</p>
+<p className="text-2xl md:text-3xl font-bold">{formatPrice(avgOrder)}</p>
 </Card>
 
-<Card className="p-6">
-<p>🔥 Produit tendance</p>
-<p className="text-xl font-bold">{trendingProduct || "-"}</p>
+<Card className="p-4">
+<p className="text-sm text-gray-500">🔥 Produit tendance</p>
+<p className="text-lg font-bold">{trendingProduct || "-"}</p>
 </Card>
 
-<Card className="p-6">
-<p>📈 Croissance semaine</p>
-<p className="text-xl font-bold">{weekGrowth.toFixed(1)}%</p>
+<Card className="p-4">
+<p className="text-sm text-gray-500">📈 Croissance semaine</p>
+<p className="text-lg font-bold">{weekGrowth.toFixed(1)}%</p>
 </Card>
 
-<Card className="p-6">
-<p>💰 Profit estimé</p>
-<p className="text-xl font-bold">{formatPrice(estimatedProfit)}</p>
+<Card className="p-4">
+<p className="text-sm text-gray-500">💰 Profit estimé</p>
+<p className="text-lg font-bold">{formatPrice(estimatedProfit)}</p>
 </Card>
 
-<Card className="p-6">
-<p>🏆 Meilleur jour</p>
-<p className="text-xl font-bold">{bestDay}</p>
+<Card className="p-4">
+<p className="text-sm text-gray-500">🏆 Meilleur jour</p>
+<p className="text-lg font-bold capitalize">{bestDay}</p>
 </Card>
 
-<Card className="p-6">
-<p>😴 Jour le plus faible</p>
-<p className="text-xl font-bold">{worstDay}</p>
+<Card className="p-4">
+<p className="text-sm text-gray-500">😴 Jour le plus faible</p>
+<p className="text-lg font-bold capitalize">{worstDay}</p>
 </Card>
 
 </div>
 
-<Card className="p-6">
+{/* GRAPH */}
 
-<h2 className="text-xl font-bold mb-4">📊 Ventes par jour</h2>
+<Card className="p-4 md:p-6">
 
-<div style={{width:"100%",height:300}}>
+<h2 className="text-lg md:text-xl font-bold mb-4">📊 Ventes par jour</h2>
+
+<div className="w-full h-[250px] md:h-[320px]">
 
 <ResponsiveContainer>
 
@@ -314,9 +313,13 @@ return(
 
 </Card>
 
-<Card className="p-6">
+{/* TOP PRODUCTS */}
 
-<h2 className="text-xl font-bold mb-4">🔥 Top produits</h2>
+<Card className="p-4 md:p-6">
+
+<h2 className="text-lg md:text-xl font-bold mb-4">🔥 Top produits</h2>
+
+<div className="space-y-2 text-sm md:text-base">
 
 {topProducts.map((p:any,i)=>(
 
@@ -324,17 +327,23 @@ return(
 
 <span>{p.product}</span>
 
-<span>{p.count}</span>
+<span className="font-semibold">{p.count}</span>
 
 </div>
 
 ))}
 
+</div>
+
 </Card>
 
-<Card className="p-6">
+{/* WILAYA */}
 
-<h2 className="text-xl font-bold mb-4">🗺 Commandes par wilaya</h2>
+<Card className="p-4 md:p-6">
+
+<h2 className="text-lg md:text-xl font-bold mb-4">🗺 Commandes par wilaya</h2>
+
+<div className="space-y-2 text-sm md:text-base">
 
 {ordersByWilaya.map((w:any,i)=>(
 
@@ -342,17 +351,23 @@ return(
 
 <span>{w.wilaya}</span>
 
-<span>{w.count}</span>
+<span className="font-semibold">{w.count}</span>
 
 </div>
 
 ))}
 
+</div>
+
 </Card>
 
-<Card className="p-6">
+{/* HOURS */}
 
-<h2 className="text-xl font-bold mb-4">⏰ Heures des commandes</h2>
+<Card className="p-4 md:p-6">
+
+<h2 className="text-lg md:text-xl font-bold mb-4">⏰ Heures des commandes</h2>
+
+<div className="space-y-2 text-sm md:text-base">
 
 {ordersByHour.map((h:any,i)=>(
 
@@ -360,17 +375,23 @@ return(
 
 <span>{h.hour}:00</span>
 
-<span>{h.count}</span>
+<span className="font-semibold">{h.count}</span>
 
 </div>
 
 ))}
 
+</div>
+
 </Card>
 
-<Card className="p-6">
+{/* WEEKDAY SALES */}
 
-<h2 className="text-xl font-bold mb-4">📅 Ventes par jour de semaine</h2>
+<Card className="p-4 md:p-6">
+
+<h2 className="text-lg md:text-xl font-bold mb-4">📅 Ventes par jour</h2>
+
+<div className="space-y-2 text-sm md:text-base">
 
 {weekdaySales.map((d:any,i)=>(
 
@@ -378,11 +399,13 @@ return(
 
 <span className="capitalize">{d.day}</span>
 
-<span>{d.orders} commandes — {formatPrice(d.revenue)}</span>
+<span>{d.orders} — {formatPrice(d.revenue)}</span>
 
 </div>
 
 ))}
+
+</div>
 
 </Card>
 
