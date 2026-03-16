@@ -250,7 +250,7 @@ return(
 </Card>
 
 <Card className="p-6">
-<p>Commandes aujourd'hui</p>
+<p>Commandes Aujourd&apos;hui</p>
 <p className="text-3xl font-bold">{todayOrders}</p>
 </Card>
 
