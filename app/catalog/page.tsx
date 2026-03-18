@@ -39,6 +39,8 @@ export default function CatalogPage() {
   const [categories,setCategories] = useState<Category[]>([]);
 
   const [loading,setLoading] = useState(true);
+  const [promotions,setPromotions] = useState<any>({})
+
 
   const [searchTerm,setSearchTerm] = useState('');
   const [filterBrand,setFilterBrand] = useState('all');
@@ -61,17 +63,36 @@ export default function CatalogPage() {
       );
 
       /* تحميل البيانات معاً لتحسين السرعة */
+const [
+  brandsSnapshot,
+  categoriesSnapshot,
+  productsSnapshot,
+  promotionsSnapshot // 🔥 جديد
+] = await Promise.all([
+  getDocs(collection(db,'brands')),
+  getDocs(collection(db,'categories')),
+  getDocs(productsQuery),
+  getDocs(
+    query(
+      collection(db,'promotions'),
+      where('active','==',true)
+    )
+  )
+]);
+const promotionsMap:any = {}
 
-      const [
-        brandsSnapshot,
-        categoriesSnapshot,
-        productsSnapshot
-      ] = await Promise.all([
-        getDocs(collection(db,'brands')),
-        getDocs(collection(db,'categories')),
-        getDocs(productsQuery)
-      ]);
+promotionsSnapshot.forEach(doc=>{
+  const data = doc.data()
 
+  if(data?.productId){
+    promotionsMap[data.productId] = {
+      id: doc.id,
+      ...data
+    }
+  }
+})
+
+setPromotions(promotionsMap)
       /* ================= BRANDS ================= */
 
       const brandsMap = new Map<string,Brand>();
@@ -294,11 +315,11 @@ export default function CatalogPage() {
               {filteredProducts.map((product)=>(
 
                 <ProductCard
-                  key={product.id}
-                  product={product}
-                  brand={brands.get(product.brandId)}
-                />
-
+  key={product.id}
+  product={product}
+  brand={brands.get(product.brandId)}
+  promotion={promotions?.[product.id]} 
+/>
               ))}
 
             </div>
