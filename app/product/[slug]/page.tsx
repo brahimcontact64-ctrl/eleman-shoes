@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   collection,
   query,
@@ -50,9 +50,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   /* ================= FETCH DATA ================= */
 
-  useEffect(()=>{
-
-    const fetchData = async()=>{
+  const fetchData = useCallback(async()=>{
 
       try{
 
@@ -115,11 +113,11 @@ export default function ProductPage({ params }: ProductPageProps) {
         setLoading(false)
       }
 
-    }
-
-    fetchData()
-
   },[params.slug])
+
+  useEffect(()=>{
+    fetchData()
+  },[fetchData])
 
   /* ================= PIXEL ================= */
 
@@ -153,17 +151,39 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   },[product])
 
-  const selectedColor = product?.colors?.find(
+  const selectedColor = useMemo(()=>product?.colors?.find(
     c=>c.colorId === selectedColorId
-  )
+  ),[product?.colors, selectedColorId])
 
-  const images =
+  const images = useMemo(()=>
     selectedColor?.images?.map(img=>img.url) ||
     product?.images ||
     []
+  ,[selectedColor?.images, product?.images])
 
-  const finalPrice =
-    promotion?.newPrice ?? product?.price
+  const currentImage = images[selectedImageIndex]
+
+  const finalPrice = useMemo(
+()=> promotion?.newPrice ?? product?.price,
+[promotion?.newPrice, product?.price]
+)
+
+  const onSelectImage = useCallback((index:number)=>{
+    setSelectedImageIndex(index)
+  },[])
+
+  useEffect(()=>{
+    setSelectedImageIndex(0)
+  },[selectedColorId])
+
+  useEffect(()=>{
+    if(!images.length) return
+
+    images.forEach((src)=>{
+      const preloadImage = new window.Image()
+      preloadImage.src = src
+    })
+  },[images])
 
   const handleWhatsAppOrder = ()=>{
 
@@ -243,15 +263,15 @@ export default function ProductPage({ params }: ProductPageProps) {
 
               <div className="relative aspect-square bg-gray-100 rounded-lg mb-4">
 
-                {images[selectedImageIndex] &&(
+                {currentImage &&(
 
                   <Image
-                    src={images[selectedImageIndex]}
+                    src={currentImage}
                     alt={product.name}
                     fill
-                    priority
+                    priority={selectedImageIndex === 0}
                     sizes="(max-width:768px) 100vw, 50vw"
-                    quality={70}
+                    quality={64}
                     className="object-cover rounded-lg"
                   />
 
@@ -267,7 +287,7 @@ export default function ProductPage({ params }: ProductPageProps) {
 
                     <div
                       key={i}
-                      onClick={()=>setSelectedImageIndex(i)}
+                      onClick={()=>onSelectImage(i)}
                       className={`relative h-24 cursor-pointer rounded border-2 ${
                         selectedImageIndex === i
                           ? 'border-gray-900'
@@ -280,8 +300,8 @@ export default function ProductPage({ params }: ProductPageProps) {
                         alt={`Image ${i+1}`}
                         fill
                         loading="lazy"
-                        sizes="100px"
-                        quality={40}
+                        sizes="96px"
+                        quality={42}
                         className="object-cover rounded"
                       />
 

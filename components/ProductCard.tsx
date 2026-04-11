@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { Product, Brand } from '@/lib/types'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -17,7 +17,7 @@ interface ProductCardProps {
   colorsMap?: Record<string,string>
 }
 
-export default function ProductCard({
+function ProductCard({
   product,
   brand,
   promotion,
@@ -32,29 +32,36 @@ const [selectedColorId,setSelectedColorId] = useState(
 
 /* ACTIVE COLOR */
 
-const activeColor =
+const activeColor = useMemo(
+()=>
 product.colors?.find(c => c.colorId === selectedColorId) ||
-product.colors?.[0]
+product.colors?.[0],
+[product.colors, selectedColorId]
+)
 
-const getImage = (img:any)=>{
+const getImage = useCallback((img:any)=>{
  if(!img) return null
  if(typeof img === "string") return img
  if(img.url) return img.url
  return null
-}
+},[])
 
-const firstImage =
+const firstImage = useMemo(()=>
 getImage(activeColor?.images?.[0]) ||
 getImage(product?.colors?.[0]?.images?.[0]) ||
 getImage(product?.images?.[0]) ||
 '/placeholder.png'
+,[activeColor?.images, getImage, product?.colors, product?.images])
 /* PRICE */
 
-const finalPrice = promotion?.newPrice ?? product.price
+const finalPrice = useMemo(
+()=> promotion?.newPrice ?? product.price,
+[promotion?.newPrice, product.price]
+)
 
 /* WHATSAPP LINK */
 
-const whatsappLink =
+const whatsappLink = useMemo(()=>
 "https://wa.me/?text=" +
 encodeURIComponent(
 "Bonjour, je suis intéressé par ce produit:\n" +
@@ -62,6 +69,11 @@ product.name +
 "\nPrix: " +
 formatPrice(finalPrice)
 )
+,[finalPrice, product.name])
+
+const handleSelectColor = useCallback((colorId: string)=>{
+setSelectedColorId(colorId)
+},[])
 
 return(
 
@@ -104,8 +116,8 @@ src={firstImage}
 alt={product.name}
 fill
 sizes="(max-width:768px) 50vw, (max-width:1200px) 33vw, 25vw"
-quality={60}
-unoptimized
+quality={58}
+loading="lazy"
 className="object-cover"
 />
 )}
@@ -157,7 +169,7 @@ key={color.colorId}
 type="button"
 onClick={(e)=>{
 e.preventDefault()
-setSelectedColorId(color.colorId)
+handleSelectColor(color.colorId)
 }}
 className={`w-6 h-6 rounded-full border-2
 ${
@@ -218,3 +230,5 @@ size="lg"
 )
 
 }
+
+export default memo(ProductCard)

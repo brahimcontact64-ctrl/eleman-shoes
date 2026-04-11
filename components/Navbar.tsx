@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from './ui/button';
 import { Menu, X } from 'lucide-react';
@@ -81,11 +82,17 @@ export default function Navbar() {
             className="flex items-center gap-3 hover:opacity-80 transition-opacity"
           >
 
-            <img
-              src={logoUrl}
-              alt={companyName}
-              className="h-12 w-auto object-contain"
-            />
+            <div className="relative h-12 w-12">
+              <Image
+                src={logoUrl}
+                alt={companyName}
+                fill
+                sizes="48px"
+                quality={52}
+                loading="lazy"
+                className="object-contain"
+              />
+            </div>
 
             <span className="text-2xl font-bold text-leather-dark">
               {companyName}

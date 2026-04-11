@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   collection,
   query,
@@ -33,7 +33,6 @@ export default function CatalogPage() {
   const { t } = useLanguage();
 
   const [products,setProducts] = useState<Product[]>([]);
-  const [filteredProducts,setFilteredProducts] = useState<Product[]>([]);
 
   const [brands,setBrands] = useState<Map<string,Brand>>(new Map());
   const [categories,setCategories] = useState<Category[]>([]);
@@ -52,9 +51,27 @@ export default function CatalogPage() {
 
   /* ================= FETCH DATA ================= */
 
-  const fetchData = async()=>{
+  const fetchData = useCallback(async()=>{
 
     try{
+      const cacheKey = 'catalog_data_v1';
+      const cacheRaw = typeof window !== 'undefined'
+        ? sessionStorage.getItem(cacheKey)
+        : null;
+
+      if (cacheRaw) {
+        const cache = JSON.parse(cacheRaw);
+        const isFresh = Date.now() - cache.timestamp < 1000 * 60 * 5;
+
+        if (isFresh) {
+          setProducts(cache.products || []);
+          setCategories(cache.categories || []);
+          setPromotions(cache.promotions || {});
+          setBrands(new Map(cache.brands || []));
+          setLoading(false);
+          return;
+        }
+      }
 
       const productsQuery = query(
         collection(db,'products'),
@@ -123,7 +140,19 @@ setPromotions(promotionsMap)
       })) as Product[];
 
       setProducts(productsData);
-      setFilteredProducts(productsData);
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            timestamp: Date.now(),
+            products: productsData,
+            categories: categoriesData,
+            promotions: promotionsMap,
+            brands: Array.from(brandsMap.entries()),
+          })
+        );
+      }
 
     }catch(error){
 
@@ -135,17 +164,18 @@ setPromotions(promotionsMap)
 
     }
 
-  };
+  },[]);
 
   /* ================= FILTER ================= */
 
-  useEffect(()=>{
+  const filteredProducts = useMemo(()=>{
+    const lowerSearchTerm = searchTerm.toLowerCase();
 
-    const filtered = products.filter((p)=>{
+    return products.filter((p)=>{
 
       if(
         searchTerm &&
-        !p.name.toLowerCase().includes(searchTerm.toLowerCase())
+        !p.name.toLowerCase().includes(lowerSearchTerm)
       ){
         return false;
       }
@@ -168,14 +198,17 @@ setPromotions(promotionsMap)
 
     });
 
-    setFilteredProducts(filtered);
-
   },[
     searchTerm,
     filterBrand,
     filterCategory,
     products
   ]);
+
+  const brandOptions = useMemo(
+    ()=>Array.from(brands.values()),
+    [brands]
+  );
 
   if(loading){
 
@@ -243,7 +276,7 @@ setPromotions(promotionsMap)
 
                   </SelectItem>
 
-                  {Array.from(brands.values()).map((brand)=>(
+                  {brandOptions.map((brand)=>(
 
                     <SelectItem
                       key={brand.id}

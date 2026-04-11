@@ -62,6 +62,25 @@ export default function Home() {
   useEffect(() => {
     const fetchHomeData = async () => {
       try {
+        const cacheKey = 'home_data_v1'
+        const cacheRaw = typeof window !== 'undefined'
+          ? sessionStorage.getItem(cacheKey)
+          : null
+
+        if (cacheRaw) {
+          const cache = JSON.parse(cacheRaw)
+          const isFresh = Date.now() - cache.timestamp < 1000 * 60 * 5
+
+          if (isFresh) {
+            setSettings(cache.settings || defaultSettings)
+            setCategoryProducts(cache.categoryProducts || [])
+            setPromotions(cache.promotions || {})
+            setColorsMap(cache.colorsMap || {})
+            setBrands(new Map(cache.brands || []))
+            setLoading(false)
+            return
+          }
+        }
 
         /* ================= CATEGORY IDS ================= */
 
@@ -175,6 +194,22 @@ setColorsMap(colors)
 
         setCategoryProducts(result)
 
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(
+            cacheKey,
+            JSON.stringify({
+              timestamp: Date.now(),
+              settings: settingsDoc.exists()
+                ? { ...defaultSettings, ...(settingsDoc.data() as Partial<SiteSettings>) }
+                : defaultSettings,
+              categoryProducts: result,
+              promotions: promotionsMap,
+              colorsMap: colors,
+              brands: Array.from(brandsMap.entries()),
+            })
+          )
+        }
+
       } catch (error) {
         console.error('Home fetch error:', error)
       } finally {
@@ -276,9 +311,9 @@ setColorsMap(colors)
 
               <div className="space-y-16">
 
-              {categoryProducts.map((section, index) => (
+              {categoryProducts.map((section) => (
 
-<div key={index}>
+              <div key={section.categoryName}>
 
 <h2 className="text-3xl font-bold mb-8 text-leather-dark text-center">
 {section.categoryName}

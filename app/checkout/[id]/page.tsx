@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import PromoBanner from '@/components/PromoBanner';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import {
   doc,
   getDoc,
@@ -83,12 +84,16 @@ export default function CheckoutPage() {
   const selectedColor =
     product?.colors?.find(c => c.colorId === selectedColorId) || null;
 
-  const colorImages = selectedColor?.images || [];
+  const colorImages = useMemo(
+    () => selectedColor?.images || [],
+    [selectedColor?.images]
+  );
 
-  const displayImage =
+  const displayImage = useMemo(() =>
     colorImages[selectedImageIndex]?.url ||
     product?.colors?.[0]?.images?.[0]?.url ||
-    '/placeholder.png';
+    '/placeholder.png',
+  [colorImages, selectedImageIndex, product?.colors]);
 
   const selectedSizeEntry = useMemo(() => {
     if (!selectedColor || !selectedSize) return null;
@@ -121,10 +126,75 @@ const total =
 
   /* ================= EFFECTS ================= */
 
+  const fetchRelated = useCallback(async (categoryId: string, currentId: string) => {
+    const q = query(
+      collection(db, 'products'),
+      where('categoryId', '==', categoryId),
+      limit(6)
+    );
+    const snap = await getDocs(q);
+    const items = snap.docs
+      .map(d => ({ id: d.id, ...d.data() } as Product))
+      .filter(p => p.id !== currentId);
+    setRelated(items);
+  },[]);
+
+  const fetchZones = useCallback(async () => {
+    const snap = await getDocs(collection(db, 'delivery_zones'));
+    const data = snap.docs.map(d => d.data()) as DeliveryZone[];
+    setZones(data.sort((a, b) => a.wilaya.localeCompare(b.wilaya)));
+  },[]);
+
+  const fetchProduct = useCallback(async () => {
+    try {
+      const snap = await getDoc(doc(db, 'products', productId));
+      if (!snap.exists()) {
+        toast.error('Produit introuvable');
+        router.push('/catalog');
+        return;
+      }
+
+      const data = { id: snap.id, ...snap.data() } as Product;
+      setProduct(data);
+      setSelectedColorId(data.colors?.[0]?.colorId || '');
+
+      const promoQuery = query(
+        collection(db, 'promotions'),
+        where('productId', '==', data.id),
+        where('active', '==', true),
+        limit(1)
+      );
+
+      const [promoSnap, brandSnap] = await Promise.all([
+        getDocs(promoQuery),
+        getDoc(doc(db, 'brands', data.brandId)),
+      ]);
+
+      if (!promoSnap.empty) {
+        setPromotion({
+          id: promoSnap.docs[0].id,
+          ...promoSnap.docs[0].data(),
+        });
+      } else {
+        setPromotion(null);
+      }
+
+      if (brandSnap.exists()) {
+        setBrand({ id: brandSnap.id, ...brandSnap.data() } as Brand);
+      }
+
+      await fetchRelated(data.categoryId, data.id);
+    } catch {
+      toast.error('Erreur de chargement du produit');
+    } finally {
+      setLoading(false);
+    }
+  },[fetchRelated, productId, router]);
+
   useEffect(() => {
     fetchProduct();
     fetchZones();
-  }, [productId]);
+  }, [fetchProduct, fetchZones]);
   /* ================= META + TIKTOK – INITIATE CHECKOUT ================= */
 
 useEffect(() => {
@@ -159,82 +229,19 @@ useEffect(() => {
   useEffect(() => {
     if (!colorImages.length) return;
     colorImages.forEach(img => {
-      const i = new Image();
+      const i = new window.Image();
       i.src = img.url;
     });
   }, [colorImages]);
 
-  /* ================= FETCH PRODUCT ================= */
+  useEffect(() => {
+    setSelectedImageIndex(0);
+  }, [selectedColorId]);
 
-  const fetchProduct = async () => {
-    try {
-      const snap = await getDoc(doc(db, 'products', productId));
-      if (!snap.exists()) {
-        toast.error('Produit introuvable');
-        router.push('/catalog');
-        return;
-      }
-
-      const data = { id: snap.id, ...snap.data() } as Product;
-      setProduct(data);
-      // fetch promotion
-const promoQuery = query(
-  collection(db, 'promotions'),
-  where('productId', '==', data.id),
-  where('active', '==', true),
-  limit(1)
-);
-
-const promoSnap = await getDocs(promoQuery);
-
-if (!promoSnap.empty) {
-  setPromotion({
-    id: promoSnap.docs[0].id,
-    ...promoSnap.docs[0].data(),
-  });
-}
-
-      setSelectedColorId(data.colors?.[0]?.colorId || '');
-
-      const brandSnap = await getDoc(doc(db, 'brands', data.brandId));
-      if (brandSnap.exists()) {
-        setBrand({ id: brandSnap.id, ...brandSnap.data() } as Brand);
-      }
-
-      fetchRelated(data.categoryId, data.id);
-    } catch {
-      toast.error('Erreur de chargement du produit');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* ================= FETCH RELATED ================= */
-
-  const fetchRelated = async (categoryId: string, currentId: string) => {
-    const q = query(
-      collection(db, 'products'),
-      where('categoryId', '==', categoryId),
-      limit(6)
-    );
-    const snap = await getDocs(q);
-    const items = snap.docs
-      .map(d => ({ id: d.id, ...d.data() } as Product))
-      .filter(p => p.id !== currentId);
-    setRelated(items);
-  };
-
-  /* ================= FETCH ZONES ================= */
-
-  const fetchZones = async () => {
-    const snap = await getDocs(collection(db, 'delivery_zones'));
-    const data = snap.docs.map(d => d.data()) as DeliveryZone[];
-    setZones(data.sort((a, b) => a.wilaya.localeCompare(b.wilaya)));
-  };
 
   /* ================= SUBMIT ================= */
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (isOutOfStock) {
@@ -291,7 +298,31 @@ if (!promoSnap.empty) {
     } finally {
       setSubmitting(false);
     }
-  };
+  },[
+    addressDetails,
+    brand?.name,
+    deliveryPrice,
+    deliveryType,
+    displayImage,
+    fullName,
+    isOutOfStock,
+    notes,
+    phone,
+    product,
+    promotion,
+    quantity,
+    router,
+    selectedColor,
+    selectedSize,
+    selectedZone?.city,
+    selectedZone?.delay,
+    total,
+    wilaya
+  ]);
+
+  const handleSelectImage = useCallback((index: number) => {
+    setSelectedImageIndex(index);
+  },[]);
 
   /* ================= RENDER ================= */
 
@@ -382,7 +413,15 @@ if (!promoSnap.empty) {
     </div>
   )}
 
-  <img src={displayImage} className="object-contain max-h-full" />
+  <Image
+    src={displayImage}
+    alt={product.name}
+    fill
+    priority={selectedImageIndex === 0}
+    sizes="(max-width: 1024px) 100vw, 42vw"
+    quality={64}
+    className="object-contain"
+  />
 </div>
 
                   {colorImages.length > 1 && (
@@ -391,11 +430,21 @@ if (!promoSnap.empty) {
                         <button
                           key={i}
                           type="button"
-                          onClick={() => setSelectedImageIndex(i)}
+                          onClick={() => handleSelectImage(i)}
                           className={`w-16 h-16 border rounded bg-white flex items-center justify-center
                             ${selectedImageIndex === i ? 'ring-2 ring-black' : ''}`}
                         >
-                          <img src={img.url} className="object-contain max-h-full" />
+                          <div className="relative w-14 h-14">
+                            <Image
+                              src={img.url}
+                              alt={`${product.name}-${i + 1}`}
+                              fill
+                              loading="lazy"
+                              sizes="56px"
+                              quality={42}
+                              className="object-contain"
+                            />
+                          </div>
                         </button>
                       ))}
                     </div>
@@ -451,10 +500,17 @@ if (!promoSnap.empty) {
                     onClick={() => router.push(`/checkout/${p.id}`)}
                     className="cursor-pointer bg-white rounded border p-3 hover:shadow"
                   >
-                    <img
-                      src={p.colors?.[0]?.images?.[0]?.url}
-                      className="aspect-square object-contain mb-2"
-                    />
+                    <div className="relative aspect-square mb-2">
+                      <Image
+                        src={p.colors?.[0]?.images?.[0]?.url || '/placeholder.png'}
+                        alt={p.name}
+                        fill
+                        loading="lazy"
+                        sizes="(max-width:768px) 45vw, 20vw"
+                        quality={44}
+                        className="object-contain"
+                      />
+                    </div>
                     <p className="text-sm font-medium">{p.name}</p>
                     <p className="text-sm font-bold text-red-600">
                       {formatPrice(p.price)}
@@ -469,7 +525,16 @@ if (!promoSnap.empty) {
 
       <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
         <DialogContent className="max-w-4xl bg-white">
-          <img src={displayImage} className="w-full object-contain" />
+          <div className="relative w-full aspect-square">
+            <Image
+              src={displayImage}
+              alt={product.name}
+              fill
+              sizes="90vw"
+              quality={70}
+              className="object-contain"
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
