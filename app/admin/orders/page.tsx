@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   collection,
   query,
@@ -43,6 +43,9 @@ import { formatPrice } from '@/lib/firebase/utils';
 import { Eye, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 
+const ORDERS_CACHE_KEY = 'admin_orders_v1';
+const ORDERS_CACHE_TTL = 1000 * 60 * 2;
+
 const timeAgo = (timestamp:any)=>{
   if(!timestamp) return ""
 
@@ -75,7 +78,6 @@ export default function AdminOrdersPage() {
   const { user } = useAuth();
 
   const [orders, setOrders] = useState<Order[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 const [note,setNote] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -86,16 +88,31 @@ const [note,setNote] = useState("")
     fetchOrders();
   }, []);
 
-  useEffect(() => {
+  const filteredOrders = useMemo(() => {
     if (filterStatus === 'all') {
-      setFilteredOrders(orders);
-    } else {
-      setFilteredOrders(orders.filter(o => o.status === filterStatus));
+      return orders;
     }
+
+    return orders.filter((order) => order.status === filterStatus);
   }, [filterStatus, orders]);
 
   const fetchOrders = useCallback(async () => {
     try {
+      const cacheRaw = typeof window !== 'undefined'
+        ? sessionStorage.getItem(ORDERS_CACHE_KEY)
+        : null;
+
+      if (cacheRaw) {
+        const cache = JSON.parse(cacheRaw);
+        const isFresh = Date.now() - cache.timestamp < ORDERS_CACHE_TTL;
+
+        if (isFresh) {
+          setOrders(cache.orders || []);
+          setLoading(false);
+          return;
+        }
+      }
+
       const q = query(
         collection(db, 'orders'),
         orderBy('createdAt', 'desc')
@@ -107,6 +124,16 @@ const [note,setNote] = useState("")
       })) as Order[];
 
       setOrders(data);
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(
+          ORDERS_CACHE_KEY,
+          JSON.stringify({
+            timestamp: Date.now(),
+            orders: data,
+          })
+        );
+      }
     } catch (e) {
       console.error(e);
       toast.error('Erreur chargement commandes');
@@ -117,14 +144,28 @@ const [note,setNote] = useState("")
 
   const patchOrderInState = useCallback((orderId: string, updates: Partial<Order>) => {
     setOrders((prev) =>
-      prev.map((order) =>
+      {
+        const next = prev.map((order) =>
         order.id === orderId
           ? {
               ...order,
               ...updates,
             }
           : order
-      )
+      );
+
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(
+            ORDERS_CACHE_KEY,
+            JSON.stringify({
+              timestamp: Date.now(),
+              orders: next,
+            })
+          );
+        }
+
+        return next;
+      }
     );
 
     setSelectedOrder((prev) =>

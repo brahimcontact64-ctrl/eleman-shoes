@@ -129,27 +129,58 @@ const total =
 
   /* ================= EFFECTS ================= */
 
-  const fetchRelated = useCallback(async (categoryId: string, currentId: string) => {
-    const q = query(
-      collection(db, 'products'),
-      where('categoryId', '==', categoryId),
-      limit(6)
-    );
-    const snap = await getDocs(q);
-    const items = snap.docs
-      .map(d => ({ id: d.id, ...d.data() } as Product))
-      .filter(p => p.id !== currentId);
-    setRelated(items);
-  },[]);
-
   const fetchZones = useCallback(async () => {
+    const cacheKey = 'delivery_zones_v1';
+    const cacheRaw = typeof window !== 'undefined'
+      ? sessionStorage.getItem(cacheKey)
+      : null;
+
+    if (cacheRaw) {
+      const cache = JSON.parse(cacheRaw);
+      const isFresh = Date.now() - cache.timestamp < 1000 * 60 * 10;
+      if (isFresh) {
+        setZones(cache.zones || []);
+        return;
+      }
+    }
+
     const snap = await getDocs(collection(db, 'delivery_zones'));
     const data = snap.docs.map(d => d.data()) as DeliveryZone[];
-    setZones(data.sort((a, b) => a.wilaya.localeCompare(b.wilaya)));
+    const sorted = data.sort((a, b) => a.wilaya.localeCompare(b.wilaya));
+    setZones(sorted);
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(
+        cacheKey,
+        JSON.stringify({
+          timestamp: Date.now(),
+          zones: sorted,
+        })
+      );
+    }
   },[]);
 
   const fetchProduct = useCallback(async () => {
     try {
+      const cacheKey = `checkout_${productId}`;
+      const cacheRaw = typeof window !== 'undefined'
+        ? sessionStorage.getItem(cacheKey)
+        : null;
+
+      if (cacheRaw) {
+        const cache = JSON.parse(cacheRaw);
+        const isFresh = Date.now() - cache.timestamp < 1000 * 60 * 5;
+        if (isFresh) {
+          setProduct(cache.product || null);
+          setPromotion(cache.promotion || null);
+          setBrand(cache.brand || null);
+          setRelated(cache.related || []);
+          setSelectedColorId(cache.product?.colors?.[0]?.colorId || '');
+          setLoading(false);
+          return;
+        }
+      }
+
       const snap = await getDoc(doc(db, 'products', productId));
       if (!snap.exists()) {
         toast.error('Produit introuvable');
@@ -186,13 +217,43 @@ const total =
         setBrand({ id: brandSnap.id, ...brandSnap.data() } as Brand);
       }
 
-      await fetchRelated(data.categoryId, data.id);
+      const relatedQuery = query(
+        collection(db, 'products'),
+        where('categoryId', '==', data.categoryId),
+        limit(6)
+      );
+      const relatedSnap = await getDocs(relatedQuery);
+      const relatedItems = relatedSnap.docs
+        .map(d => ({ id: d.id, ...d.data() } as Product))
+        .filter(p => p.id !== data.id);
+
+      setRelated(relatedItems);
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            timestamp: Date.now(),
+            product: data,
+            promotion: !promoSnap.empty
+              ? {
+                  id: promoSnap.docs[0].id,
+                  ...promoSnap.docs[0].data(),
+                }
+              : null,
+            brand: brandSnap.exists()
+              ? { id: brandSnap.id, ...brandSnap.data() }
+              : null,
+            related: relatedItems,
+          })
+        );
+      }
     } catch {
       toast.error('Erreur de chargement du produit');
     } finally {
       setLoading(false);
     }
-  },[fetchRelated, productId, router]);
+  },[productId, router]);
 
   useEffect(() => {
     fetchProduct();
@@ -420,9 +481,9 @@ useEffect(() => {
     src={displayImage}
     alt={product.name}
     fill
-    loading="lazy"
+    priority={selectedImageIndex === 0}
     sizes="(max-width: 1024px) 100vw, 42vw"
-    quality={56}
+    quality={66}
     placeholder="blur"
     blurDataURL={BLUR_DATA_URL}
     className="object-contain"
@@ -446,7 +507,7 @@ useEffect(() => {
                               fill
                               loading="lazy"
                               sizes="56px"
-                              quality={34}
+                              quality={44}
                               placeholder="blur"
                               blurDataURL={BLUR_DATA_URL}
                               className="object-contain"
@@ -514,7 +575,7 @@ useEffect(() => {
                         fill
                         loading="lazy"
                         sizes="(max-width:768px) 45vw, 20vw"
-                        quality={36}
+                        quality={46}
                         placeholder="blur"
                         blurDataURL={BLUR_DATA_URL}
                         className="object-contain"
@@ -540,7 +601,7 @@ useEffect(() => {
               alt={product.name}
               fill
               sizes="90vw"
-              quality={56}
+              quality={72}
               placeholder="blur"
               blurDataURL={BLUR_DATA_URL}
               className="object-contain"

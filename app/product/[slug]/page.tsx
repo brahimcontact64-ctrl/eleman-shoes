@@ -57,6 +57,24 @@ export default function ProductPage({ params }: ProductPageProps) {
   const fetchData = useCallback(async()=>{
 
       try{
+        const cacheKey = `product_page_${params.slug}`
+        const cacheRaw = typeof window !== 'undefined'
+          ? sessionStorage.getItem(cacheKey)
+          : null
+
+        if (cacheRaw) {
+          const cache = JSON.parse(cacheRaw)
+          const isFresh = Date.now() - cache.timestamp < 1000 * 60 * 5
+
+          if (isFresh) {
+            setProduct(cache.product || null)
+            setBrand(cache.brand || null)
+            setPromotion(cache.promotion || null)
+            setSelectedColorId(cache.product?.colors?.[0]?.colorId || null)
+            setLoading(false)
+            return
+          }
+        }
 
         const productSnap = await getDocs(
           query(
@@ -109,6 +127,25 @@ export default function ProductPage({ params }: ProductPageProps) {
 
         if(p.colors && p.colors.length>0){
           setSelectedColorId(p.colors[0].colorId)
+        }
+
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(
+            cacheKey,
+            JSON.stringify({
+              timestamp: Date.now(),
+              product: p,
+              brand: brandSnap.exists()
+                ? { id: brandSnap.id, ...brandSnap.data() }
+                : null,
+              promotion: !promoSnap.empty
+                ? {
+                    id: promoSnap.docs[0].id,
+                    ...promoSnap.docs[0].data(),
+                  }
+                : null,
+            })
+          )
         }
 
       }catch(err){
@@ -257,9 +294,9 @@ export default function ProductPage({ params }: ProductPageProps) {
                     src={currentImage}
                     alt={product.name}
                     fill
-                    loading="lazy"
+                    priority={selectedImageIndex === 0}
                     sizes="(max-width:768px) 100vw, 50vw"
-                    quality={56}
+                    quality={66}
                     placeholder="blur"
                     blurDataURL={BLUR_DATA_URL}
                     className="object-cover rounded-lg"
@@ -291,7 +328,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                         fill
                         loading="lazy"
                         sizes="96px"
-                        quality={36}
+                        quality={46}
                         placeholder="blur"
                         blurDataURL={BLUR_DATA_URL}
                         className="object-cover rounded"

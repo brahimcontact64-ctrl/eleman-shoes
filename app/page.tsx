@@ -243,7 +243,7 @@ setColorsMap(colors)
             alt="Chaussures en cuir"
             fill
             priority
-            quality={60}
+            quality={72}
             sizes="100vw"
             placeholder="blur"
             blurDataURL={BLUR_DATA_URL}

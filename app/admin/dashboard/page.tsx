@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { useCallback, useEffect, useState } from 'react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Order } from '@/lib/types';
 import ProtectedRoute from '@/components/admin/ProtectedRoute';
@@ -11,6 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatPrice } from '@/lib/firebase/utils';
 import { ShoppingBag, Package, DollarSign, TrendingUp } from 'lucide-react';
+
+const ORDERS_CACHE_KEY = 'admin_orders_v1';
+const PRODUCTS_COUNT_CACHE_KEY = 'admin_products_count_v1';
+const ADMIN_CACHE_TTL = 1000 * 60 * 2;
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState({
@@ -22,72 +26,107 @@ export default function AdminDashboardPage() {
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  const buildDashboardState = useCallback((orders: Order[], totalProducts: number) => {
+    const newOrdersCount = orders.filter((o) => o.status === 'new').length;
+    const totalRevenue = orders
+      .filter((o) => o.status !== 'cancelled')
+      .reduce((sum, o) => sum + o.total, 0);
 
-  const fetchDashboardData = async () => {
-    try {
-      const cacheKey = 'admin_dashboard_v1';
-      const cachedRaw = typeof window !== 'undefined'
-        ? sessionStorage.getItem(cacheKey)
-        : null;
+    const recentOrdersData = [...orders]
+      .sort((a, b) => {
+        const aSeconds = a.createdAt?.seconds || 0;
+        const bSeconds = b.createdAt?.seconds || 0;
+        return bSeconds - aSeconds;
+      })
+      .slice(0, 5);
 
-      if (cachedRaw) {
-        const cached = JSON.parse(cachedRaw);
-        const isFresh = Date.now() - cached.timestamp < 1000 * 60 * 2;
-        if (isFresh) {
-          setStats(cached.stats);
-          setRecentOrders(cached.recentOrders || []);
-          setLoading(false);
-          return;
-        }
-      }
-
-      const recentOrdersQuery = query(
-        collection(db, 'orders'),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      );
-
-      const [ordersSnapshot, productsSnapshot, recentOrdersSnapshot] = await Promise.all([
-        getDocs(collection(db, 'orders')),
-        getDocs(query(collection(db, 'products'), where('isActive', '==', true))),
-        getDocs(recentOrdersQuery),
-      ]);
-
-      const orders = ordersSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Order[];
-
-      const newOrdersCount = orders.filter((o) => o.status === 'new').length;
-      const totalRevenue = orders
-        .filter((o) => o.status !== 'cancelled')
-        .reduce((sum, o) => sum + o.total, 0);
-
-      const recentOrdersData = recentOrdersSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Order[];
-
-      const nextStats = {
+    return {
+      stats: {
         totalOrders: orders.length,
         newOrders: newOrdersCount,
-        totalProducts: productsSnapshot.size,
+        totalProducts,
         totalRevenue,
-      };
+      },
+      recentOrders: recentOrdersData,
+    };
+  }, []);
 
-      setStats(nextStats);
-      setRecentOrders(recentOrdersData);
+  const readFreshCache = useCallback((key: string) => {
+    if (typeof window === 'undefined') return null;
+
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+
+    try {
+      const parsed = JSON.parse(raw);
+      const isFresh = Date.now() - parsed.timestamp < ADMIN_CACHE_TTL;
+      return isFresh ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      const ordersCached = readFreshCache(ORDERS_CACHE_KEY);
+      const productsCached = readFreshCache(PRODUCTS_COUNT_CACHE_KEY);
+
+      if (ordersCached?.orders && typeof productsCached?.totalProducts === 'number') {
+        const cachedState = buildDashboardState(ordersCached.orders as Order[], productsCached.totalProducts as number);
+        setStats(cachedState.stats);
+        setRecentOrders(cachedState.recentOrders);
+        setLoading(false);
+        return;
+      }
+
+      if (ordersCached?.orders) {
+        const productsSnapshot = await getDocs(query(collection(db, 'products'), where('isActive', '==', true)));
+        const partialState = buildDashboardState(ordersCached.orders as Order[], productsSnapshot.size);
+        setStats(partialState.stats);
+        setRecentOrders(partialState.recentOrders);
+
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(
+            PRODUCTS_COUNT_CACHE_KEY,
+            JSON.stringify({
+              timestamp: Date.now(),
+              totalProducts: productsSnapshot.size,
+            })
+          );
+        }
+
+        setLoading(false);
+        return;
+      }
+
+      const [ordersSnapshot, productsSnapshot] = await Promise.all([
+        getDocs(collection(db, 'orders')),
+        getDocs(query(collection(db, 'products'), where('isActive', '==', true))),
+      ]);
+
+      const orders = ordersSnapshot.docs.map((document) => ({
+        id: document.id,
+        ...document.data(),
+      })) as Order[];
+
+      const nextState = buildDashboardState(orders, productsSnapshot.size);
+
+      setStats(nextState.stats);
+      setRecentOrders(nextState.recentOrders);
 
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(
-          cacheKey,
+          ORDERS_CACHE_KEY,
           JSON.stringify({
             timestamp: Date.now(),
-            stats: nextStats,
-            recentOrders: recentOrdersData,
+            orders,
+          })
+        );
+        sessionStorage.setItem(
+          PRODUCTS_COUNT_CACHE_KEY,
+          JSON.stringify({
+            timestamp: Date.now(),
+            totalProducts: productsSnapshot.size,
           })
         );
       }
@@ -96,7 +135,11 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [buildDashboardState, readFreshCache]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const getStatusBadge = (status: string) => {
     const styles = {

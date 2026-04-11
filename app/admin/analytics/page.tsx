@@ -19,6 +19,12 @@ import {
 	CartesianGrid,
 } from 'recharts'
 
+const ORDERS_CACHE_KEY = 'admin_orders_v1'
+const ANALYTICS_CACHE_KEY = 'admin_analytics_orders_v1'
+const ADMIN_CACHE_TTL = 1000 * 60 * 2
+const dayFormatter = new Intl.DateTimeFormat('fr-FR')
+const weekdayFormatter = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' })
+
 type AnalyticsOrder = {
 	id: string
 	total: number
@@ -34,19 +40,32 @@ export default function AnalyticsPage() {
 	useEffect(() => {
 		const fetchStats = async () => {
 			try {
-				const cacheKey = 'admin_analytics_orders_v1'
-				const cacheRaw = typeof window !== 'undefined'
-					? sessionStorage.getItem(cacheKey)
-					: null
+				const readFreshCache = (key: string) => {
+					if (typeof window === 'undefined') return null
+					const raw = sessionStorage.getItem(key)
+					if (!raw) return null
 
-				if (cacheRaw) {
-					const cache = JSON.parse(cacheRaw)
-					const isFresh = Date.now() - cache.timestamp < 1000 * 60 * 2
-					if (isFresh) {
-						setOrders(cache.orders || [])
-						setLoading(false)
-						return
+					try {
+						const parsed = JSON.parse(raw)
+						const isFresh = Date.now() - parsed.timestamp < ADMIN_CACHE_TTL
+						return isFresh ? (parsed.orders || []) : null
+					} catch {
+						return null
 					}
+				}
+
+				const sharedCachedOrders = readFreshCache(ORDERS_CACHE_KEY)
+				if (sharedCachedOrders) {
+					setOrders(sharedCachedOrders)
+					setLoading(false)
+					return
+				}
+
+				const analyticsCachedOrders = readFreshCache(ANALYTICS_CACHE_KEY)
+				if (analyticsCachedOrders) {
+					setOrders(analyticsCachedOrders)
+					setLoading(false)
+					return
 				}
 
 				const snap = await getDocs(collection(db, 'orders'))
@@ -66,7 +85,14 @@ export default function AnalyticsPage() {
 
 				if (typeof window !== 'undefined') {
 					sessionStorage.setItem(
-						cacheKey,
+						ANALYTICS_CACHE_KEY,
+						JSON.stringify({
+							timestamp: Date.now(),
+							orders: data,
+						})
+					)
+					sessionStorage.setItem(
+						ORDERS_CACHE_KEY,
 						JSON.stringify({
 							timestamp: Date.now(),
 							orders: data,
@@ -112,10 +138,10 @@ export default function AnalyticsPage() {
 				todayProductMap[productName] = (todayProductMap[productName] || 0) + 1
 			}
 
-			const day = date.toLocaleDateString('fr-FR')
+			const day = dayFormatter.format(date)
 			dayMap[day] = (dayMap[day] || 0) + order.total
 
-			const weekday = date.toLocaleDateString('fr-FR', { weekday: 'long' })
+			const weekday = weekdayFormatter.format(date)
 			if (!weekdayMap[weekday]) {
 				weekdayMap[weekday] = { orders: 0, revenue: 0 }
 			}
