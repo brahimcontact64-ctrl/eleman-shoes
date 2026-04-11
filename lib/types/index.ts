@@ -134,6 +134,7 @@ export interface Product {
 export type DeliveryStatus =
   | 'pending'
   | 'preparing'
+  | 'on_the_way'
   | 'shipped'
   | 'delivered'
   | 'returned';

@@ -1,262 +1,245 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { useEffect, useMemo, useState } from 'react';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
 import { db } from '@/lib/firebase/config';
+import { DeliveryStatus, Order, OrderStatus } from '@/lib/types';
+import ProtectedRoute from '@/components/admin/ProtectedRoute';
+import AdminLayout from '@/components/admin/AdminLayout';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { formatPrice } from '@/lib/firebase/utils';
 
-type Order = {
-  orderNumber: string;
-  createdAt?: any;
-  customer?: {
-    fullName?: string;
-    phone?: string;
-    wilaya?: string;
-    addressDetails?: string;
+const statusLabel = (status: OrderStatus) => {
+  const labels: Record<OrderStatus, string> = {
+    pending: 'En attente client',
+    new: 'Nouvelle',
+    confirmed: 'Confirmée',
+    cancelled: 'Annulée',
   };
-  product?: {
-    name?: string;
-    price?: number;
-    quantity?: number;
-  };
-  variant?: {
-    size?: number;
-    colorName?: string;
-  };
-  delivery?: {
-    price?: number;
-    type?: string;
-  };
-  total?: number;
+
+  return labels[status] || 'Inconnu';
 };
 
-export default function InvoicePage() {
-  const { id } = useParams();
+const deliveryStatusLabel = (status?: DeliveryStatus) => {
+  const labels: Record<string, string> = {
+    pending: 'En attente',
+    preparing: 'Préparation',
+    shipped: 'Expédiée',
+    on_the_way: 'En route',
+    delivered: 'Livrée',
+    returned: 'Retournée',
+  };
+
+  return labels[status || 'pending'] || 'Inconnu';
+};
+
+const formatDate = (timestamp?: Timestamp) => {
+  if (!timestamp) return '-';
+  return timestamp.toDate().toLocaleString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+export default function AdminInvoicePage() {
+  const params = useParams();
+  const orderId = params?.id as string | undefined;
+
   const [order, setOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      const ref = doc(db, 'orders', id as string);
-      const snap = await getDoc(ref);
-      if (snap.exists()) setOrder(snap.data() as Order);
-    };
-    load();
-  }, [id]);
+    if (!orderId) return;
 
-  if (!order) {
-    return <p style={{ padding: 40 }}>Chargement...</p>;
+    const loadOrder = async () => {
+      try {
+        const orderRef = doc(db, 'orders', orderId);
+        const orderSnap = await getDoc(orderRef);
+
+        if (!orderSnap.exists()) {
+          setNotFound(true);
+          return;
+        }
+
+        setOrder({ id: orderSnap.id, ...orderSnap.data() } as Order);
+      } catch (error) {
+        console.error(error);
+        setNotFound(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrder();
+  }, [orderId]);
+
+  const pricing = useMemo(() => {
+    if (!order) {
+      return {
+        quantity: 1,
+        unitPrice: 0,
+        productSubtotal: 0,
+        deliveryPrice: 0,
+        total: 0,
+      };
+    }
+
+    const quantity = order.quantity || 1;
+    const unitPrice = order.product?.price || 0;
+    const productSubtotal = unitPrice * quantity;
+    const deliveryPrice = order.delivery?.price || 0;
+    const total = order.total || productSubtotal + deliveryPrice;
+
+    return {
+      quantity,
+      unitPrice,
+      productSubtotal,
+      deliveryPrice,
+      total,
+    };
+  }, [order]);
+
+  if (loading) {
+    return (
+      <ProtectedRoute>
+        <AdminLayout>
+          <div className="flex justify-center py-20">
+            <div className="animate-spin h-10 w-10 border-b-2 border-black rounded-full" />
+          </div>
+        </AdminLayout>
+      </ProtectedRoute>
+    );
   }
 
-  const date = order.createdAt?.toDate
-    ? order.createdAt.toDate().toLocaleString('fr-FR')
-    : '';
-
-  const qty = order.product?.quantity ?? 1;
-  const productPrice = order.product?.price ?? 0;
-  const productTotal = productPrice * qty;
-  const deliveryPrice = order.delivery?.price ?? 0;
+  if (notFound || !order) {
+    return (
+      <ProtectedRoute>
+        <AdminLayout>
+          <Card className="p-6">
+            <h1 className="text-xl font-semibold">Facture introuvable</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Cette commande n&apos;existe pas ou n&apos;est plus disponible.
+            </p>
+          </Card>
+        </AdminLayout>
+      </ProtectedRoute>
+    );
+  }
 
   return (
-    <div style={page}>
-      {/* LOGO */}
-      <div style={logoBox}>
-        <Image
-          src="/okp.jpeg"
-          alt="Logo"
-          width={120}
-          height={60}
-          style={{ objectFit: 'contain' }}
-        />
-      </div>
+    <ProtectedRoute>
+      <AdminLayout>
+        <div className="max-w-5xl mx-auto space-y-4 pb-10">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between print:hidden">
+            <div>
+              <h1 className="text-2xl font-bold">Facture</h1>
+              <p className="text-sm text-muted-foreground">Commande {order.orderNumber}</p>
+            </div>
+            <Button onClick={() => window.print()}>Print</Button>
+          </div>
 
-      {/* HEADER */}
-      <div style={header}>
-        <h1 style={title}>FACTURE</h1>
+          <Card className="p-5 sm:p-8 space-y-8">
+            <div className="flex flex-col sm:flex-row gap-6 sm:items-start sm:justify-between border-b pb-6">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Invoice</p>
+                <h2 className="text-2xl font-bold mt-1">#{order.orderNumber}</h2>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex gap-2 items-center justify-start sm:justify-end">
+                  <span className="text-muted-foreground">Date:</span>
+                  <span className="font-medium capitalize">{formatDate(order.createdAt)}</span>
+                </div>
+                <div className="flex gap-2 items-center justify-start sm:justify-end">
+                  <Badge variant="secondary">{statusLabel(order.status)}</Badge>
+                  <Badge variant="outline">{deliveryStatusLabel(order.deliveryStatus)}</Badge>
+                </div>
+              </div>
+            </div>
 
-        <div style={{ display: 'flex', gap: 10 }} className="no-print">
-          <button onClick={() => window.print()} style={printBtn}>
-            🖨️ Imprimer
-          </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="p-4">
+                <h3 className="font-semibold mb-3">Informations client</h3>
+                <div className="space-y-2 text-sm">
+                  <p><span className="text-muted-foreground">Nom:</span> {order.customer.fullName}</p>
+                  <p><span className="text-muted-foreground">Téléphone:</span> {order.customer.phone}</p>
+                  <p><span className="text-muted-foreground">Wilaya:</span> {order.customer.wilaya || '-'}</p>
+                  <p><span className="text-muted-foreground">Adresse:</span> {order.customer.addressDetails || '-'}</p>
+                </div>
+              </Card>
 
-          <button onClick={() => window.print()} style={downloadBtn}>
-            ⬇️ Télécharger
-          </button>
+              <Card className="p-4">
+                <h3 className="font-semibold mb-3">Informations livraison</h3>
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">Type:</span>{' '}
+                    {order.delivery.type === 'home' ? 'À domicile' : 'Stop desk'}
+                  </p>
+                  <p><span className="text-muted-foreground">Frais:</span> {formatPrice(pricing.deliveryPrice)}</p>
+                  <p><span className="text-muted-foreground">Statut:</span> {deliveryStatusLabel(order.deliveryStatus)}</p>
+                </div>
+              </Card>
+            </div>
+
+            <Card className="p-4">
+              <h3 className="font-semibold mb-4">Produit</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+                <p><span className="text-muted-foreground">Nom:</span> {order.product.name}</p>
+                <p><span className="text-muted-foreground">Marque:</span> {order.product.brandName || '-'}</p>
+                <p><span className="text-muted-foreground">Quantité:</span> {pricing.quantity}</p>
+                <p><span className="text-muted-foreground">Pointure:</span> {order.variant?.size ?? '-'}</p>
+                <p><span className="text-muted-foreground">Couleur:</span> {order.variant?.colorName ?? '-'}</p>
+                <p><span className="text-muted-foreground">Prix unitaire:</span> {formatPrice(pricing.unitPrice)}</p>
+              </div>
+            </Card>
+
+            <Card className="p-4">
+              <h3 className="font-semibold mb-4">Détail des prix</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Sous-total produit</span>
+                  <span>{formatPrice(pricing.productSubtotal)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Frais de livraison</span>
+                  <span>{formatPrice(pricing.deliveryPrice)}</span>
+                </div>
+                <div className="flex items-center justify-between border-t pt-3 text-base font-semibold">
+                  <span>Total</span>
+                  <span>{formatPrice(pricing.total)}</span>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4">
+              <h3 className="font-semibold mb-3">Notes</h3>
+              <p className="text-sm text-muted-foreground">{order.notes || 'Aucune note'}</p>
+            </Card>
+          </Card>
         </div>
-      </div>
 
-      {/* INFOS */}
-      <div style={info}>
-        <div>
-          <p><b>N° Commande :</b> {order.orderNumber}</p>
-          <p><b>Date :</b> {date}</p>
-        </div>
+        <style>
+          {`
+            @media print {
+              @page {
+                size: auto;
+                margin: 14mm;
+              }
 
-        <div>
-          <p><b>Client :</b> {order.customer?.fullName}</p>
-          <p><b>Téléphone :</b> {order.customer?.phone}</p>
-          <p>
-            <b>Adresse :</b>{' '}
-            {order.customer?.wilaya} {order.customer?.addressDetails}
-          </p>
-        </div>
-      </div>
-
-      {/* PRODUCT DETAILS */}
-      <div style={variantBox}>
-        <p><b>Couleur :</b> {order.variant?.colorName ?? '-'}</p>
-        <p><b>Pointure :</b> {order.variant?.size ?? '-'}</p>
-      </div>
-
-      {/* TABLE */}
-      <table style={table}>
-        <thead>
-          <tr>
-            <th style={th}>Produit</th>
-            <th style={th}>Prix</th>
-            <th style={th}>Qté</th>
-            <th style={th}>Total</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr>
-            <td style={td}>{order.product?.name}</td>
-            <td style={td}>{productPrice.toLocaleString()} DA</td>
-            <td style={td}>{qty}</td>
-            <td style={td}>{productTotal.toLocaleString()} DA</td>
-          </tr>
-
-          <tr>
-            <td style={{ ...td, fontStyle: 'italic' }}>
-              Livraison ({order.delivery?.type})
-            </td>
-            <td style={td}>{deliveryPrice.toLocaleString()} DA</td>
-            <td style={td}>1</td>
-            <td style={td}>{deliveryPrice.toLocaleString()} DA</td>
-          </tr>
-        </tbody>
-      </table>
-
-      {/* TOTAL */}
-      <div style={totalBox}>
-        TOTAL : {order.total?.toLocaleString()} DA
-      </div>
-
-      {/* FOOTER */}
-      <p style={footer}>
-        Merci pour votre confiance 🤍
-      </p>
-
-      {/* PRINT FIX */}
-      <style>
-        {`
-          @media print {
-            .no-print {
-              display: none !important;
+              body {
+                background: white !important;
+              }
             }
-
-            body {
-              background: white !important;
-            }
-
-            @page {
-              margin: 20mm;
-            }
-          }
-        `}
-      </style>
-    </div>
+          `}
+        </style>
+      </AdminLayout>
+    </ProtectedRoute>
   );
 }
-
-/* ================= STYLES ================= */
-
-const page: React.CSSProperties = {
-  maxWidth: 900,
-  margin: '40px auto',
-  padding: 40,
-  background: '#fff',
-  color: '#000',
-  fontFamily: 'Arial, sans-serif',
-};
-
-const logoBox: React.CSSProperties = {
-  textAlign: 'center',
-  marginBottom: 20,
-};
-
-const header: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: 30,
-};
-
-const title: React.CSSProperties = {
-  margin: 0,
-  fontSize: 28,
-  letterSpacing: 1,
-};
-
-const printBtn: React.CSSProperties = {
-  padding: '8px 16px',
-  background: '#000',
-  color: '#fff',
-  borderRadius: 6,
-  border: 'none',
-  cursor: 'pointer',
-};
-
-const downloadBtn: React.CSSProperties = {
-  padding: '8px 16px',
-  background: '#555',
-  color: '#fff',
-  borderRadius: 6,
-  border: 'none',
-  cursor: 'pointer',
-};
-
-const info: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  marginBottom: 20,
-  lineHeight: 1.6,
-};
-
-const variantBox: React.CSSProperties = {
-  display: 'flex',
-  gap: 40,
-  marginBottom: 20,
-  fontSize: 14,
-};
-
-const table: React.CSSProperties = {
-  width: '100%',
-  borderCollapse: 'collapse',
-};
-
-const th: React.CSSProperties = {
-  textAlign: 'left',
-  padding: 12,
-  borderBottom: '2px solid #000',
-};
-
-const td: React.CSSProperties = {
-  padding: 12,
-  borderBottom: '1px solid #ddd',
-};
-
-const totalBox: React.CSSProperties = {
-  textAlign: 'right',
-  marginTop: 30,
-  fontSize: 22,
-  fontWeight: 'bold',
-};
-
-const footer: React.CSSProperties = {
-  marginTop: 60,
-  textAlign: 'center',
-  fontSize: 13,
-  color: '#555',
-};

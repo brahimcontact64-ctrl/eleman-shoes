@@ -42,6 +42,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatPrice } from '@/lib/firebase/utils';
 import { Eye, Filter } from 'lucide-react';
 import { toast } from 'sonner';
+
 const timeAgo = (timestamp:any)=>{
   if(!timestamp) return ""
 
@@ -257,17 +258,26 @@ const deliveryBadge = (status: DeliveryStatus) => {
                       {deliveryBadge(order.deliveryStatus || 'pending')}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                       onClick={() => {
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                         onClick={() => {
   setSelectedOrder(order);
   setNote(order.notes || "");
   setDialogOpen(true);
 }}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(`/admin/invoices/${order.id}`, '_blank')}
+                        >
+                          🧾 Facture
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -299,6 +309,11 @@ const deliveryBadge = (status: DeliveryStatus) => {
 <div className="border rounded-md p-3 space-y-1">
   <div>
     <strong>📦 Produit:</strong> {selectedOrder.product.name}
+  </div>
+
+  <div>
+    <strong>🔢 Quantité:</strong>{' '}
+    {selectedOrder.quantity ?? '-'}
   </div>
 
   <div>
