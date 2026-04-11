@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import {
   collection,
   query,
@@ -16,17 +17,21 @@ import { Product, Brand } from '@/lib/types'
 
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import WhatsAppButton from '@/components/WhatsAppButton'
 
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 
 import { useLanguage } from '@/contexts/LanguageContext'
 import { formatPrice } from '@/lib/firebase/utils'
 
-import { MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+
+const WhatsAppButton = dynamic(() => import('@/components/WhatsAppButton'), {
+  ssr: false,
+})
+
+const BLUR_DATA_URL =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
 
 interface ProductPageProps {
   params: {
@@ -45,7 +50,6 @@ export default function ProductPage({ params }: ProductPageProps) {
   const [loading,setLoading] = useState(true)
 
   const [selectedColorId,setSelectedColorId] = useState<string | null>(null)
-  const [selectedSize,setSelectedSize] = useState<number | null>(null)
   const [selectedImageIndex,setSelectedImageIndex] = useState(0)
 
   /* ================= FETCH DATA ================= */
@@ -185,22 +189,6 @@ export default function ProductPage({ params }: ProductPageProps) {
     })
   },[images])
 
-  const handleWhatsAppOrder = ()=>{
-
-    if(!product) return
-
-    const msg =
-      `Bonjour, je suis intéressé par ce produit:\n` +
-      `${product.name}\n` +
-      `Prix: ${formatPrice(finalPrice)}`
-
-    window.open(
-      'https://wa.me/?text='+encodeURIComponent(msg),
-      '_blank'
-    )
-
-  }
-
   if(loading){
 
     return(
@@ -269,9 +257,11 @@ export default function ProductPage({ params }: ProductPageProps) {
                     src={currentImage}
                     alt={product.name}
                     fill
-                    priority={selectedImageIndex === 0}
+                    loading="lazy"
                     sizes="(max-width:768px) 100vw, 50vw"
-                    quality={64}
+                    quality={56}
+                    placeholder="blur"
+                    blurDataURL={BLUR_DATA_URL}
                     className="object-cover rounded-lg"
                   />
 
@@ -301,7 +291,9 @@ export default function ProductPage({ params }: ProductPageProps) {
                         fill
                         loading="lazy"
                         sizes="96px"
-                        quality={42}
+                        quality={36}
+                        placeholder="blur"
+                        blurDataURL={BLUR_DATA_URL}
                         className="object-cover rounded"
                       />
 

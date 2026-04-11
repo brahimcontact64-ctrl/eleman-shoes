@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   collection,
   query,
@@ -94,7 +94,7 @@ const [note,setNote] = useState("")
     }
   }, [filterStatus, orders]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       const q = query(
         collection(db, 'orders'),
@@ -107,14 +107,35 @@ const [note,setNote] = useState("")
       })) as Order[];
 
       setOrders(data);
-      setFilteredOrders(data);
     } catch (e) {
       console.error(e);
       toast.error('Erreur chargement commandes');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const patchOrderInState = useCallback((orderId: string, updates: Partial<Order>) => {
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.id === orderId
+          ? {
+              ...order,
+              ...updates,
+            }
+          : order
+      )
+    );
+
+    setSelectedOrder((prev) =>
+      prev && prev.id === orderId
+        ? {
+            ...prev,
+            ...updates,
+          }
+        : prev
+    );
+  }, []);
 
   const updateOrderField = async (
     orderId: string,
@@ -140,8 +161,8 @@ const [note,setNote] = useState("")
         metadata: { userAgent: getUserAgent() },
       });
 
+      patchOrderInState(orderId, updates);
       toast.success('Commande mise à jour');
-      fetchOrders();
     } catch (e) {
       console.error(e);
       toast.error('Erreur mise à jour');

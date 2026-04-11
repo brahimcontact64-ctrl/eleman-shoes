@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { Order, Product } from '@/lib/types';
+import { Order } from '@/lib/types';
 import ProtectedRoute from '@/components/admin/ProtectedRoute';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,7 +28,34 @@ export default function AdminDashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const ordersSnapshot = await getDocs(collection(db, 'orders'));
+      const cacheKey = 'admin_dashboard_v1';
+      const cachedRaw = typeof window !== 'undefined'
+        ? sessionStorage.getItem(cacheKey)
+        : null;
+
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        const isFresh = Date.now() - cached.timestamp < 1000 * 60 * 2;
+        if (isFresh) {
+          setStats(cached.stats);
+          setRecentOrders(cached.recentOrders || []);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const recentOrdersQuery = query(
+        collection(db, 'orders'),
+        orderBy('createdAt', 'desc'),
+        limit(5)
+      );
+
+      const [ordersSnapshot, productsSnapshot, recentOrdersSnapshot] = await Promise.all([
+        getDocs(collection(db, 'orders')),
+        getDocs(query(collection(db, 'products'), where('isActive', '==', true))),
+        getDocs(recentOrdersQuery),
+      ]);
+
       const orders = ordersSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -39,26 +66,31 @@ export default function AdminDashboardPage() {
         .filter((o) => o.status !== 'cancelled')
         .reduce((sum, o) => sum + o.total, 0);
 
-      const productsSnapshot = await getDocs(query(collection(db, 'products'), where('isActive', '==', true)));
-
-      const recentOrdersQuery = query(
-        collection(db, 'orders'),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      );
-      const recentOrdersSnapshot = await getDocs(recentOrdersQuery);
       const recentOrdersData = recentOrdersSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Order[];
 
-      setStats({
+      const nextStats = {
         totalOrders: orders.length,
         newOrders: newOrdersCount,
         totalProducts: productsSnapshot.size,
         totalRevenue,
-      });
+      };
+
+      setStats(nextStats);
       setRecentOrders(recentOrdersData);
+
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            timestamp: Date.now(),
+            stats: nextStats,
+            recentOrders: recentOrdersData,
+          })
+        );
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {

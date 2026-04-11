@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   collection,
   query,
@@ -13,7 +14,6 @@ import { Product, Brand, Category } from '@/lib/types';
 
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import WhatsAppButton from '@/components/WhatsAppButton';
 import ProductCard from '@/components/ProductCard';
 
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,10 @@ import {
 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Search } from 'lucide-react';
+
+const WhatsAppButton = dynamic(() => import('@/components/WhatsAppButton'), {
+  ssr: false,
+});
 
 export default function CatalogPage() {
 

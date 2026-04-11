@@ -10,6 +10,9 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { formatPrice } from '@/lib/firebase/utils'
 import { MessageCircle } from 'lucide-react'
 
+const BLUR_DATA_URL =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+
 interface ProductCardProps {
   product: Product
   brand?: Brand
@@ -116,8 +119,10 @@ src={firstImage}
 alt={product.name}
 fill
 sizes="(max-width:768px) 50vw, (max-width:1200px) 33vw, 25vw"
-quality={58}
+quality={38}
 loading="lazy"
+placeholder="blur"
+blurDataURL={BLUR_DATA_URL}
 className="object-cover"
 />
 )}

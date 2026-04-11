@@ -1,226 +1,226 @@
 'use client'
 
-import { useEffect, useState } from "react"
-import { collection, getDocs } from "firebase/firestore"
-import { db } from "@/lib/firebase/config"
+import { useEffect, useMemo, useState } from 'react'
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from '@/lib/firebase/config'
 
-import AdminLayout from "@/components/admin/AdminLayout"
-import ProtectedRoute from "@/components/admin/ProtectedRoute"
-import { Card } from "@/components/ui/card"
-import { formatPrice } from "@/lib/firebase/utils"
+import AdminLayout from '@/components/admin/AdminLayout'
+import ProtectedRoute from '@/components/admin/ProtectedRoute'
+import { Card } from '@/components/ui/card'
+import { formatPrice } from '@/lib/firebase/utils'
 
 import {
-ResponsiveContainer,
-BarChart,
-Bar,
-XAxis,
-YAxis,
-Tooltip,
-CartesianGrid
-} from "recharts"
+	ResponsiveContainer,
+	BarChart,
+	Bar,
+	XAxis,
+	YAxis,
+	Tooltip,
+	CartesianGrid,
+} from 'recharts'
 
-export default function AnalyticsPage(){
-
-type Order = {
-id:string
-total:number
-createdAt:{seconds:number}
-product?:{name?:string}
-customer?:{wilaya?:string}
+type AnalyticsOrder = {
+	id: string
+	total: number
+	createdAt?: { seconds: number }
+	product?: { name?: string }
+	customer?: { wilaya?: string }
 }
 
-const [orders,setOrders] = useState<Order[]>([])
+export default function AnalyticsPage() {
+	const [orders, setOrders] = useState<AnalyticsOrder[]>([])
+	const [loading, setLoading] = useState(true)
 
-const [totalOrders,setTotalOrders] = useState(0)
-const [totalRevenue,setTotalRevenue] = useState(0)
-const [todayOrders,setTodayOrders] = useState(0)
-const [avgOrder,setAvgOrder] = useState(0)
+	useEffect(() => {
+		const fetchStats = async () => {
+			try {
+				const cacheKey = 'admin_analytics_orders_v1'
+				const cacheRaw = typeof window !== 'undefined'
+					? sessionStorage.getItem(cacheKey)
+					: null
 
-const [trendingProduct,setTrendingProduct] = useState("")
-const [weekGrowth,setWeekGrowth] = useState(0)
-const [estimatedProfit,setEstimatedProfit] = useState(0)
+				if (cacheRaw) {
+					const cache = JSON.parse(cacheRaw)
+					const isFresh = Date.now() - cache.timestamp < 1000 * 60 * 2
+					if (isFresh) {
+						setOrders(cache.orders || [])
+						setLoading(false)
+						return
+					}
+				}
 
-const [salesPerDay,setSalesPerDay] = useState<any[]>([])
-const [topProducts,setTopProducts] = useState<any[]>([])
-const [ordersByWilaya,setOrdersByWilaya] = useState<any[]>([])
-const [ordersByHour,setOrdersByHour] = useState<any[]>([])
-const [weekdaySales,setWeekdaySales] = useState<any[]>([])
+				const snap = await getDocs(collection(db, 'orders'))
 
-const [bestDay,setBestDay] = useState("")
-const [worstDay,setWorstDay] = useState("")
+				const data: AnalyticsOrder[] = snap.docs.map((document) => {
+					const docData: any = document.data()
+					return {
+						id: document.id,
+						total: docData.total || 0,
+						createdAt: docData.createdAt,
+						product: docData.product,
+						customer: docData.customer,
+					}
+				})
 
-useEffect(()=>{
-fetchStats()
-},[])
+				setOrders(data)
 
-const fetchStats = async()=>{
+				if (typeof window !== 'undefined') {
+					sessionStorage.setItem(
+						cacheKey,
+						JSON.stringify({
+							timestamp: Date.now(),
+							orders: data,
+						})
+					)
+				}
+			} finally {
+				setLoading(false)
+			}
+		}
 
-const snap = await getDocs(collection(db,"orders"))
+		fetchStats()
+	}, [])
 
-const data:Order[] = snap.docs.map(d=>{
-const docData:any = d.data()
-return{
-id:d.id,
-total:docData.total || 0,
-createdAt:docData.createdAt,
-product:docData.product,
-customer:docData.customer
-}
-})
+	const analytics = useMemo(() => {
+		let totalRevenue = 0
+		let todayOrders = 0
+		const todayDate = new Date().toDateString()
 
-setOrders(data)
+		const dayMap: Record<string, number> = {}
+		const productMap: Record<string, number> = {}
+		const wilayaMap: Record<string, number> = {}
+		const hourMap: Record<string, number> = {}
+		const weekdayMap: Record<string, { orders: number; revenue: number }> = {}
+		const todayProductMap: Record<string, number> = {}
 
-let revenue = 0
-let today = 0
+		const now = Date.now()
+		const weekMs = 7 * 24 * 60 * 60 * 1000
+		let thisWeekRevenue = 0
+		let lastWeekRevenue = 0
 
-const todayDate = new Date().toDateString()
+		orders.forEach((order) => {
+			if (!order.createdAt?.seconds) return
 
-const dayMap:any = {}
-const productMap:any = {}
-const wilayaMap:any = {}
-const hourMap:any = {}
-const weekdayMap:any = {}
-const todayProductMap:any = {}
+			const createdAtMs = order.createdAt.seconds * 1000
+			const date = new Date(createdAtMs)
 
-data.forEach(o=>{
+			totalRevenue += order.total
 
-const date = new Date(o.createdAt.seconds*1000)
+			if (date.toDateString() === todayDate) {
+				todayOrders++
+				const productName = order.product?.name || 'Unknown'
+				todayProductMap[productName] = (todayProductMap[productName] || 0) + 1
+			}
 
-revenue += o.total
+			const day = date.toLocaleDateString('fr-FR')
+			dayMap[day] = (dayMap[day] || 0) + order.total
 
-if(date.toDateString() === todayDate){
-today++
+			const weekday = date.toLocaleDateString('fr-FR', { weekday: 'long' })
+			if (!weekdayMap[weekday]) {
+				weekdayMap[weekday] = { orders: 0, revenue: 0 }
+			}
+			weekdayMap[weekday].orders += 1
+			weekdayMap[weekday].revenue += order.total
 
-const name = o.product?.name || "Unknown"
-if(!todayProductMap[name]) todayProductMap[name]=0
-todayProductMap[name]++
-}
+			const productName = order.product?.name || 'Unknown'
+			productMap[productName] = (productMap[productName] || 0) + 1
 
-const day = date.toLocaleDateString("fr-FR")
+			const wilaya = order.customer?.wilaya || 'Unknown'
+			wilayaMap[wilaya] = (wilayaMap[wilaya] || 0) + 1
 
-if(!dayMap[day]) dayMap[day]=0
-dayMap[day]+=o.total
+			const hour = String(date.getHours())
+			hourMap[hour] = (hourMap[hour] || 0) + 1
 
-const weekday = date.toLocaleDateString("fr-FR",{weekday:"long"})
+			const age = now - createdAtMs
+			if (age < weekMs) {
+				thisWeekRevenue += order.total
+			} else if (age >= weekMs && age < weekMs * 2) {
+				lastWeekRevenue += order.total
+			}
+		})
 
-if(!weekdayMap[weekday]){
-weekdayMap[weekday]={orders:0,revenue:0}
-}
+		const salesPerDay = Object.keys(dayMap).map((day) => ({
+			date: day,
+			sales: dayMap[day],
+		}))
 
-weekdayMap[weekday].orders++
-weekdayMap[weekday].revenue+=o.total
+		const topProducts = Object.keys(productMap)
+			.map((name) => ({ product: name, count: productMap[name] }))
+			.sort((a, b) => b.count - a.count)
+			.slice(0, 5)
 
-const product = o.product?.name || "Unknown"
-if(!productMap[product]) productMap[product]=0
-productMap[product]++
+		const ordersByWilaya = Object.keys(wilayaMap)
+			.map((wilaya) => ({ wilaya, count: wilayaMap[wilaya] }))
+			.sort((a, b) => b.count - a.count)
 
-const wilaya = o.customer?.wilaya || "Unknown"
-if(!wilayaMap[wilaya]) wilayaMap[wilaya]=0
-wilayaMap[wilaya]++
+		const ordersByHour = Object.keys(hourMap)
+			.map((hour) => ({ hour, count: hourMap[hour] }))
+			.sort((a, b) => Number(a.hour) - Number(b.hour))
 
-const hour = date.getHours()
-if(!hourMap[hour]) hourMap[hour]=0
-hourMap[hour]++
+		const weekdaySales = Object.keys(weekdayMap).map((weekday) => ({
+			day: weekday,
+			orders: weekdayMap[weekday].orders,
+			revenue: weekdayMap[weekday].revenue,
+		}))
 
-})
+		let trendingProduct = ''
+		let trendingCount = 0
 
-setTotalOrders(data.length)
-setTotalRevenue(revenue)
-setTodayOrders(today)
-setAvgOrder(data.length ? revenue/data.length : 0)
+		Object.keys(todayProductMap).forEach((name) => {
+			if (todayProductMap[name] > trendingCount) {
+				trendingCount = todayProductMap[name]
+				trendingProduct = name
+			}
+		})
 
-const salesArray = Object.keys(dayMap).map(d=>({
-date:d,
-sales:dayMap[d]
-}))
+		let bestDay = ''
+		let bestRevenue = 0
+		let worstDay = ''
+		let worstRevenue = Number.POSITIVE_INFINITY
 
-setSalesPerDay(salesArray)
+		weekdaySales.forEach((dayStat) => {
+			if (dayStat.revenue > bestRevenue) {
+				bestRevenue = dayStat.revenue
+				bestDay = dayStat.day
+			}
 
-const topArray = Object.keys(productMap)
-.map(p=>({product:p,count:productMap[p]}))
-.sort((a,b)=>b.count-a.count)
-.slice(0,5)
+			if (dayStat.revenue < worstRevenue) {
+				worstRevenue = dayStat.revenue
+				worstDay = dayStat.day
+			}
+		})
 
-setTopProducts(topArray)
+		return {
+			totalOrders: orders.length,
+			totalRevenue,
+			todayOrders,
+			avgOrder: orders.length ? totalRevenue / orders.length : 0,
+			trendingProduct,
+			weekGrowth: lastWeekRevenue
+				? ((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100
+				: 0,
+			estimatedProfit: totalRevenue * 0.3,
+			salesPerDay,
+			topProducts,
+			ordersByWilaya,
+			ordersByHour,
+			weekdaySales,
+			bestDay,
+			worstDay,
+		}
+	}, [orders])
 
-const wilayaArray = Object.keys(wilayaMap)
-.map(w=>({wilaya:w,count:wilayaMap[w]}))
-.sort((a,b)=>b.count-a.count)
-
-setOrdersByWilaya(wilayaArray)
-
-const hourArray = Object.keys(hourMap)
-.map(h=>({hour:h,count:hourMap[h]}))
-.sort((a,b)=>Number(a.hour)-Number(b.hour))
-
-setOrdersByHour(hourArray)
-
-let trending=""
-let max=0
-
-Object.keys(todayProductMap).forEach(p=>{
-if(todayProductMap[p]>max){
-max=todayProductMap[p]
-trending=p
-}
-})
-
-setTrendingProduct(trending)
-
-setEstimatedProfit(revenue*0.3)
-
-const now = new Date()
-const week = 7*24*60*60*1000
-
-const thisWeek = data.filter(o=>{
-const d=new Date(o.createdAt.seconds*1000)
-return now.getTime()-d.getTime()<week
-})
-
-const lastWeek = data.filter(o=>{
-const d=new Date(o.createdAt.seconds*1000)
-return now.getTime()-d.getTime()<week*2 &&
-now.getTime()-d.getTime()>week
-})
-
-const thisWeekRevenue=thisWeek.reduce((s,o)=>s+o.total,0)
-const lastWeekRevenue=lastWeek.reduce((s,o)=>s+o.total,0)
-
-const growth = lastWeekRevenue ? ((thisWeekRevenue-lastWeekRevenue)/lastWeekRevenue)*100 : 0
-
-setWeekGrowth(growth)
-
-const weekdayArray = Object.keys(weekdayMap).map(d=>({
-day:d,
-orders:weekdayMap[d].orders,
-revenue:weekdayMap[d].revenue
-}))
-
-setWeekdaySales(weekdayArray)
-
-let best=""
-let bestVal=0
-let worst=""
-let worstVal=999999
-
-weekdayArray.forEach(w=>{
-
-if(w.revenue>bestVal){
-bestVal=w.revenue
-best=w.day
-}
-
-if(w.revenue<worstVal){
-worstVal=w.revenue
-worst=w.day
-}
-
-})
-
-setBestDay(best)
-setWorstDay(worst)
-
-}
+	if (loading) {
+		return (
+			<ProtectedRoute>
+				<AdminLayout>
+					<div className="flex items-center justify-center h-64">
+						<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
+					</div>
+				</AdminLayout>
+			</ProtectedRoute>
+		)
+	}
 
 return(
 
@@ -238,47 +238,47 @@ return(
 
 <Card className="p-4">
 <p className="text-sm text-gray-500">Total commandes</p>
-<p className="text-2xl md:text-3xl font-bold">{totalOrders}</p>
+<p className="text-2xl md:text-3xl font-bold">{analytics.totalOrders}</p>
 </Card>
 
 <Card className="p-4">
 <p className="text-sm text-gray-500">Total ventes</p>
-<p className="text-2xl md:text-3xl font-bold">{formatPrice(totalRevenue)}</p>
+<p className="text-2xl md:text-3xl font-bold">{formatPrice(analytics.totalRevenue)}</p>
 </Card>
 
 <Card className="p-4">
 <p className="text-sm text-gray-500">Commandes Aujourd&apos;hui</p>
-<p className="text-2xl md:text-3xl font-bold">{todayOrders}</p>
+<p className="text-2xl md:text-3xl font-bold">{analytics.todayOrders}</p>
 </Card>
 
 <Card className="p-4">
 <p className="text-sm text-gray-500">Panier moyen</p>
-<p className="text-2xl md:text-3xl font-bold">{formatPrice(avgOrder)}</p>
+<p className="text-2xl md:text-3xl font-bold">{formatPrice(analytics.avgOrder)}</p>
 </Card>
 
 <Card className="p-4">
 <p className="text-sm text-gray-500">🔥 Produit tendance</p>
-<p className="text-lg font-bold">{trendingProduct || "-"}</p>
+<p className="text-lg font-bold">{analytics.trendingProduct || "-"}</p>
 </Card>
 
 <Card className="p-4">
 <p className="text-sm text-gray-500">📈 Croissance semaine</p>
-<p className="text-lg font-bold">{weekGrowth.toFixed(1)}%</p>
+<p className="text-lg font-bold">{analytics.weekGrowth.toFixed(1)}%</p>
 </Card>
 
 <Card className="p-4">
 <p className="text-sm text-gray-500">💰 Profit estimé</p>
-<p className="text-lg font-bold">{formatPrice(estimatedProfit)}</p>
+<p className="text-lg font-bold">{formatPrice(analytics.estimatedProfit)}</p>
 </Card>
 
 <Card className="p-4">
 <p className="text-sm text-gray-500">🏆 Meilleur jour</p>
-<p className="text-lg font-bold capitalize">{bestDay}</p>
+<p className="text-lg font-bold capitalize">{analytics.bestDay}</p>
 </Card>
 
 <Card className="p-4">
 <p className="text-sm text-gray-500">😴 Jour le plus faible</p>
-<p className="text-lg font-bold capitalize">{worstDay}</p>
+<p className="text-lg font-bold capitalize">{analytics.worstDay}</p>
 </Card>
 
 </div>
@@ -293,7 +293,7 @@ return(
 
 <ResponsiveContainer>
 
-<BarChart data={salesPerDay}>
+<BarChart data={analytics.salesPerDay}>
 
 <CartesianGrid strokeDasharray="3 3"/>
 
@@ -321,9 +321,9 @@ return(
 
 <div className="space-y-2 text-sm md:text-base">
 
-{topProducts.map((p:any,i)=>(
+{analytics.topProducts.map((p,i)=>(
 
-<div key={i} className="flex justify-between">
+<div key={`${p.product}-${i}`} className="flex justify-between">
 
 <span>{p.product}</span>
 
@@ -345,9 +345,9 @@ return(
 
 <div className="space-y-2 text-sm md:text-base">
 
-{ordersByWilaya.map((w:any,i)=>(
+{analytics.ordersByWilaya.map((w,i)=>(
 
-<div key={i} className="flex justify-between">
+<div key={`${w.wilaya}-${i}`} className="flex justify-between">
 
 <span>{w.wilaya}</span>
 
@@ -369,9 +369,9 @@ return(
 
 <div className="space-y-2 text-sm md:text-base">
 
-{ordersByHour.map((h:any,i)=>(
+{analytics.ordersByHour.map((h,i)=>(
 
-<div key={i} className="flex justify-between">
+<div key={`${h.hour}-${i}`} className="flex justify-between">
 
 <span>{h.hour}:00</span>
 
@@ -393,9 +393,9 @@ return(
 
 <div className="space-y-2 text-sm md:text-base">
 
-{weekdaySales.map((d:any,i)=>(
+{analytics.weekdaySales.map((d,i)=>(
 
-<div key={i} className="flex justify-between">
+<div key={`${d.day}-${i}`} className="flex justify-between">
 
 <span className="capitalize">{d.day}</span>
 

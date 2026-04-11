@@ -41,6 +41,9 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { formatPrice } from '@/lib/firebase/utils';
 import { toast } from 'sonner';
 
+const BLUR_DATA_URL =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+
 export default function CheckoutPage() {
   const params = useParams();
   const router = useRouter();
@@ -417,9 +420,11 @@ useEffect(() => {
     src={displayImage}
     alt={product.name}
     fill
-    priority={selectedImageIndex === 0}
+    loading="lazy"
     sizes="(max-width: 1024px) 100vw, 42vw"
-    quality={64}
+    quality={56}
+    placeholder="blur"
+    blurDataURL={BLUR_DATA_URL}
     className="object-contain"
   />
 </div>
@@ -441,7 +446,9 @@ useEffect(() => {
                               fill
                               loading="lazy"
                               sizes="56px"
-                              quality={42}
+                              quality={34}
+                              placeholder="blur"
+                              blurDataURL={BLUR_DATA_URL}
                               className="object-contain"
                             />
                           </div>
@@ -507,7 +514,9 @@ useEffect(() => {
                         fill
                         loading="lazy"
                         sizes="(max-width:768px) 45vw, 20vw"
-                        quality={44}
+                        quality={36}
+                        placeholder="blur"
+                        blurDataURL={BLUR_DATA_URL}
                         className="object-contain"
                       />
                     </div>
@@ -531,7 +540,9 @@ useEffect(() => {
               alt={product.name}
               fill
               sizes="90vw"
-              quality={70}
+              quality={56}
+              placeholder="blur"
+              blurDataURL={BLUR_DATA_URL}
               className="object-contain"
             />
           </div>

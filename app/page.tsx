@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import ProductCard from '@/components/ProductCard'
 import { useEffect, useState } from 'react'
 import {
@@ -20,12 +21,18 @@ import { Product, Brand } from '@/lib/types'
 import Navbar from '@/components/Navbar'
 import PromoBanner from '@/components/PromoBanner'
 import Footer from '@/components/Footer'
-import WhatsAppButton from '@/components/WhatsAppButton'
 import ProductCardSkeleton from '@/components/ProductCardSkeleton'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Truck, Shield, Star, Zap } from 'lucide-react'
+
+const WhatsAppButton = dynamic(() => import('@/components/WhatsAppButton'), {
+  ssr: false,
+})
+
+const BLUR_DATA_URL =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
 
 
 interface SiteSettings {
@@ -238,6 +245,8 @@ setColorsMap(colors)
             priority
             quality={60}
             sizes="100vw"
+            placeholder="blur"
+            blurDataURL={BLUR_DATA_URL}
             className="object-cover"
           />
 
