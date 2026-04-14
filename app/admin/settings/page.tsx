@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { optimizeImage } from '@/lib/cloudinary';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -192,11 +194,16 @@ export default function SettingsPage() {
                     />
                     {settings.heroImage && (
                       <div className="mt-2">
-                        <img
-                          src={settings.heroImage}
-                          alt="Hero preview"
-                          className="w-full h-48 object-cover rounded-lg"
-                        />
+                        <div className="relative w-full h-48 rounded-lg overflow-hidden">
+                          <Image
+                            src={optimizeImage(settings.heroImage, 1200) || '/whatsapp_image_2026-02-03_at_11.14.37.jpeg'}
+                            alt="Hero preview"
+                            fill
+                            sizes="100vw"
+                            quality={68}
+                            className="object-cover"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -589,11 +596,16 @@ export default function SettingsPage() {
                     {settings.logoUrl && (
                       <div className="mt-2 p-4 bg-white border border-leather-light/30 rounded-lg">
                         <p className="text-sm text-leather-gray mb-2">Aperçu du logo:</p>
-                        <img
-                          src={settings.logoUrl}
-                          alt="Logo preview"
-                          className="h-20 w-auto object-contain"
-                        />
+                        <div className="relative h-20 w-40">
+                          <Image
+                            src={optimizeImage(settings.logoUrl, 200) || '/okp.jpeg'}
+                            alt="Logo preview"
+                            fill
+                            sizes="160px"
+                            quality={56}
+                            className="object-contain"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>

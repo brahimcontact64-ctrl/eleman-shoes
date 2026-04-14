@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { optimizeImage } from '@/lib/cloudinary';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from './ui/button';
 import { Menu, X } from 'lucide-react';
@@ -16,6 +17,8 @@ export default function Navbar() {
   const [mobileMenuOpen,setMobileMenuOpen] = useState(false);
   const [companyName,setCompanyName] = useState('Eleman Shoes');
   const [logoUrl,setLogoUrl] = useState('/okp.jpeg');
+
+  const optimizedLogoUrl = useMemo(() => optimizeImage(logoUrl, 96) || '/okp.jpeg', [logoUrl]);
 
   useEffect(()=>{
 
@@ -84,7 +87,7 @@ export default function Navbar() {
 
             <div className="relative h-12 w-12">
               <Image
-                src={logoUrl}
+                src={optimizedLogoUrl}
                 alt={companyName}
                 fill
                 sizes="48px"

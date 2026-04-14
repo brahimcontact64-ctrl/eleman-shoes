@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { optimizeImage } from '@/lib/cloudinary';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Brand } from '@/lib/types';
@@ -165,11 +167,16 @@ export default function BrandsPage() {
                   {formData.logo && (
                     <div>
                       <Label>Aperçu du logo</Label>
-                      <img
-                        src={formData.logo}
-                        alt="Logo preview"
-                        className="w-32 h-32 object-contain border border-leather-light/30 rounded p-2"
-                      />
+                      <div className="relative w-32 h-32 border border-leather-light/30 rounded p-2">
+                        <Image
+                          src={optimizeImage(formData.logo, 200) || '/placeholder.png'}
+                          alt="Logo preview"
+                          fill
+                          sizes="128px"
+                          quality={56}
+                          className="object-contain"
+                        />
+                      </div>
                     </div>
                   )}
                   <div className="flex justify-end gap-2">
@@ -208,11 +215,16 @@ export default function BrandsPage() {
                       <TableRow key={brand.id}>
                         <TableCell>
                           {brand.logo ? (
-                            <img
-                              src={brand.logo}
-                              alt={brand.name}
-                              className="w-16 h-16 object-contain"
-                            />
+                            <div className="relative w-16 h-16">
+                              <Image
+                                src={optimizeImage(brand.logo, 100) || '/placeholder.png'}
+                                alt={brand.name}
+                                fill
+                                sizes="64px"
+                                quality={56}
+                                className="object-contain"
+                              />
+                            </div>
                           ) : (
                             <div className="w-16 h-16 bg-leather-beige rounded flex items-center justify-center text-leather-gray text-xs">
                               No Logo

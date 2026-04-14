@@ -25,6 +25,7 @@ import { formatPrice } from '@/lib/firebase/utils'
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { optimizeImage } from '@/lib/cloudinary'
 
 const WhatsAppButton = dynamic(() => import('@/components/WhatsAppButton'), {
   ssr: false,
@@ -196,13 +197,14 @@ export default function ProductPage({ params }: ProductPageProps) {
     c=>c.colorId === selectedColorId
   ),[product?.colors, selectedColorId])
 
-  const images = useMemo(()=>
-    selectedColor?.images?.map(img=>img.url) ||
-    product?.images ||
-    []
-  ,[selectedColor?.images, product?.images])
+  const images = useMemo(() => {
+    const fromColor = selectedColor?.images?.map((img) => img.url).filter(Boolean) || []
+    const fromProduct = (product?.images || []).filter(Boolean)
+    const list = fromColor.length > 0 ? fromColor : fromProduct
+    return list.length > 0 ? list : ['/placeholder.png']
+  }, [selectedColor?.images, product?.images])
 
-  const currentImage = images[selectedImageIndex]
+  const currentImage = images[selectedImageIndex] || '/placeholder.png'
 
   const finalPrice = useMemo(
 ()=> promotion?.newPrice ?? product?.price,
@@ -291,12 +293,12 @@ export default function ProductPage({ params }: ProductPageProps) {
                 {currentImage &&(
 
                   <Image
-                    src={currentImage}
+                    src={optimizeImage(currentImage, 900) || '/placeholder.png'}
                     alt={product.name}
                     fill
                     priority={selectedImageIndex === 0}
                     sizes="(max-width:768px) 100vw, 50vw"
-                    quality={66}
+                    quality={70}
                     placeholder="blur"
                     blurDataURL={BLUR_DATA_URL}
                     className="object-cover rounded-lg"
@@ -323,12 +325,12 @@ export default function ProductPage({ params }: ProductPageProps) {
                     >
 
                       <Image
-                        src={img}
+                        src={optimizeImage(img, 200) || '/placeholder.png'}
                         alt={`Image ${i+1}`}
                         fill
                         loading="lazy"
                         sizes="96px"
-                        quality={46}
+                        quality={40}
                         placeholder="blur"
                         blurDataURL={BLUR_DATA_URL}
                         className="object-cover rounded"

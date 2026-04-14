@@ -2,9 +2,10 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { optimizeImage } from '@/lib/cloudinary'
 import dynamic from 'next/dynamic'
 import ProductCard from '@/components/ProductCard'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   collection,
   query,
@@ -65,6 +66,8 @@ export default function Home() {
   const [promotions, setPromotions] = useState<PromotionMap | null>(null)
   const [loading, setLoading] = useState(true)
   const [colorsMap, setColorsMap] = useState<Record<string, string>>({})
+
+  const heroImageSrc = useMemo(() => optimizeImage(settings.heroImage, 1920) || '/whatsapp_image_2026-02-03_at_11.14.37.jpeg', [settings.heroImage])
 
   useEffect(() => {
     const fetchHomeData = async () => {
@@ -239,11 +242,11 @@ setColorsMap(colors)
         <section className="relative w-full h-[100svh] md:h-[700px] overflow-hidden">
 
           <Image
-            src={settings.heroImage}
+            src={heroImageSrc}
             alt="Chaussures en cuir"
             fill
             priority
-            quality={72}
+            quality={60}
             sizes="100vw"
             placeholder="blur"
             blurDataURL={BLUR_DATA_URL}

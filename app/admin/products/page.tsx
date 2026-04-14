@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { optimizeImage } from '@/lib/cloudinary';
 import {
   collection,
   getDocs,
@@ -466,10 +468,16 @@ const handleSubmit = async (e: React.FormEvent) => {
   <div className="flex flex-wrap gap-2 mt-2">
     {color.existingImages.map((img, i) => (
       <div key={i} className="relative">
-        <img
-          src={img.url}
-          className="w-20 h-20 object-cover rounded border"
-        />
+        <div className="relative w-20 h-20">
+          <Image
+            src={optimizeImage(img.url, 200) || '/placeholder.png'}
+            alt={`Image couleur ${i + 1}`}
+            fill
+            sizes="80px"
+            quality={56}
+            className="object-cover rounded border"
+          />
+        </div>
 
         <button
           type="button"

@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase/config'
 import Link from 'next/link'
 import Image from 'next/image'
+import { optimizeImage } from '@/lib/cloudinary'
 
 import {
 Phone,
@@ -40,6 +41,11 @@ companyName:'Eleman Shoes',
 footerText:'Grossiste de chaussures de qualité en Algérie',
 logoUrl:'/okp.jpeg'
 })
+
+const optimizedLogoUrl = useMemo(() => {
+const logo = settings.logoUrl && settings.logoUrl.length > 0 ? settings.logoUrl : '/okp.jpeg'
+return optimizeImage(logo, 160) || '/okp.jpeg'
+}, [settings.logoUrl])
 
 useEffect(()=>{
 
@@ -83,7 +89,7 @@ return(
 <div className="flex items-center gap-3 mb-4">
 
 <Image
-src={settings.logoUrl && settings.logoUrl.length > 0 ? settings.logoUrl : '/okp.jpeg'}
+src={optimizedLogoUrl}
 alt={settings.companyName || 'logo'}
 width={160}
 height={60}

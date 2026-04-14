@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import PromoBanner from '@/components/PromoBanner';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { optimizeImage } from '@/lib/cloudinary';
 import {
   doc,
   getDoc,
@@ -86,6 +87,7 @@ export default function CheckoutPage() {
 
   const selectedColor =
     product?.colors?.find(c => c.colorId === selectedColorId) || null;
+
 
   const colorImages = useMemo(
     () => selectedColor?.images || [],
@@ -478,12 +480,12 @@ useEffect(() => {
   )}
 
   <Image
-    src={displayImage}
+    src={optimizeImage(displayImage, 900) || '/placeholder.png'}
     alt={product.name}
     fill
     priority={selectedImageIndex === 0}
     sizes="(max-width: 1024px) 100vw, 42vw"
-    quality={66}
+    quality={62}
     placeholder="blur"
     blurDataURL={BLUR_DATA_URL}
     className="object-contain"
@@ -502,12 +504,12 @@ useEffect(() => {
                         >
                           <div className="relative w-14 h-14">
                             <Image
-                              src={img.url}
+                              src={optimizeImage(img.url, 180) || '/placeholder.png'}
                               alt={`${product.name}-${i + 1}`}
                               fill
                               loading="lazy"
                               sizes="56px"
-                              quality={44}
+                              quality={40}
                               placeholder="blur"
                               blurDataURL={BLUR_DATA_URL}
                               className="object-contain"
@@ -570,7 +572,7 @@ useEffect(() => {
                   >
                     <div className="relative aspect-square mb-2">
                       <Image
-                        src={p.colors?.[0]?.images?.[0]?.url || '/placeholder.png'}
+                        src={optimizeImage(p.colors?.[0]?.images?.[0]?.url ?? '', 400) || '/placeholder.png'}
                         alt={p.name}
                         fill
                         loading="lazy"
@@ -597,11 +599,11 @@ useEffect(() => {
         <DialogContent className="max-w-4xl bg-white">
           <div className="relative w-full aspect-square">
             <Image
-              src={displayImage}
+              src={optimizeImage(displayImage, 1200) || '/placeholder.png'}
               alt={product.name}
               fill
               sizes="90vw"
-              quality={72}
+              quality={62}
               placeholder="blur"
               blurDataURL={BLUR_DATA_URL}
               className="object-contain"
