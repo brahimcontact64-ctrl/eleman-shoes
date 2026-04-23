@@ -483,7 +483,7 @@ useEffect(() => {
     src={optimizeImage(displayImage, 900) || '/placeholder.png'}
     alt={product.name}
     fill
-    priority={selectedImageIndex === 0}
+    loading="lazy"
     sizes="(max-width: 1024px) 100vw, 42vw"
     quality={62}
     placeholder="blur"
@@ -576,7 +576,7 @@ useEffect(() => {
                         alt={p.name}
                         fill
                         loading="lazy"
-                        sizes="(max-width:768px) 45vw, 20vw"
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                         quality={46}
                         placeholder="blur"
                         blurDataURL={BLUR_DATA_URL}
@@ -602,6 +602,7 @@ useEffect(() => {
               src={optimizeImage(displayImage, 1200) || '/placeholder.png'}
               alt={product.name}
               fill
+              loading="lazy"
               sizes="90vw"
               quality={62}
               placeholder="blur"

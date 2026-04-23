@@ -93,6 +93,8 @@ src={optimizedLogoUrl}
 alt={settings.companyName || 'logo'}
 width={160}
 height={60}
+sizes="160px"
+loading="lazy"
 className="object-contain bg-white rounded-lg p-1"
 />
 

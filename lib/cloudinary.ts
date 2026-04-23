@@ -1,23 +1,51 @@
+const CLOUDINARY_CLOUD_NAME =
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'devq3prkj'
+
+const hasTransformFlag = (url: string, flag: string): boolean =>
+  new RegExp(`(?:^|[,/])${flag}(?:,|/|$)`).test(url)
+
+const hasWidthTransform = (url: string): boolean =>
+  /(?:^|[,/])w_\d+(?:,|/|$)/.test(url)
+
 /**
- * Cloudinary image optimization helper.
- *
- * If the URL is already a Cloudinary URL, inject f_auto,q_auto and the
- * requested width into the transformation string so Cloudinary serves the
- * lightest possible format (WebP / AVIF) at the right resolution.
- *
- * Firebase Storage URLs and local paths are returned as-is so nothing breaks
- * when images haven't been migrated yet.
+ * Returns a Cloudinary-optimized URL with automatic format/quality and a
+ * bounded width to reduce payload size, especially on mobile networks.
  */
 export const optimizeImage = (url: string, width = 400): string => {
   if (!url) return ''
 
-  if (url.includes('res.cloudinary.com')) {
-    // Avoid double-injecting if transforms are already present
-    if (url.includes('f_auto') || url.includes('q_auto')) return url
+  if (url.startsWith('/')) return url
 
-    return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width}/`)
+  const safeWidth = Math.max(80, Math.round(width || 400))
+  const baseTransform = `f_auto,q_auto,w_${safeWidth}`
+
+  if (url.includes('res.cloudinary.com')) {
+    if (url.includes('/image/upload/')) {
+      const hasAuto = hasTransformFlag(url, 'f_auto') && hasTransformFlag(url, 'q_auto')
+      const hasWidth = hasWidthTransform(url)
+
+      if (hasAuto && hasWidth) return url
+
+      const transform = hasAuto ? `w_${safeWidth}` : baseTransform
+      return url.replace('/image/upload/', `/image/upload/${transform}/`)
+    }
+
+    if (url.includes('/image/fetch/')) {
+      const hasAuto = hasTransformFlag(url, 'f_auto') && hasTransformFlag(url, 'q_auto')
+      const hasWidth = hasWidthTransform(url)
+
+      if (hasAuto && hasWidth) return url
+
+      const transform = hasAuto ? `w_${safeWidth}` : baseTransform
+      return url.replace('/image/fetch/', `/image/fetch/${transform}/`)
+    }
+
+    return url
   }
 
-  // Firebase Storage or anything else: return unchanged
+  if (/^https?:\/\//i.test(url)) {
+    return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/fetch/${baseTransform}/${encodeURIComponent(url)}`
+  }
+
   return url
 }

@@ -296,7 +296,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                     src={optimizeImage(currentImage, 900) || '/placeholder.png'}
                     alt={product.name}
                     fill
-                    priority={selectedImageIndex === 0}
+                    loading="lazy"
                     sizes="(max-width:768px) 100vw, 50vw"
                     quality={70}
                     placeholder="blur"

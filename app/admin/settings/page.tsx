@@ -200,7 +200,7 @@ export default function SettingsPage() {
                             alt="Hero preview"
                             fill
                             sizes="100vw"
-                            quality={68}
+                            quality={60}
                             className="object-cover"
                           />
                         </div>
