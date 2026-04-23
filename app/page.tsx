@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { optimizeImage } from '@/lib/cloudinary'
+import { getOptimizedImage } from '@/lib/cloudinary'
 import dynamic from 'next/dynamic'
 import ProductCard from '@/components/ProductCard'
 import { useEffect, useMemo, useState } from 'react'
@@ -67,7 +67,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [colorsMap, setColorsMap] = useState<Record<string, string>>({})
 
-  const heroImageSrc = useMemo(() => optimizeImage(settings.heroImage, 1600) || '/whatsapp_image_2026-02-03_at_11.14.37.jpeg', [settings.heroImage])
+  const heroImageSrc = useMemo(() => getOptimizedImage(settings.heroImage, 1600) || '/whatsapp_image_2026-02-03_at_11.14.37.jpeg', [settings.heroImage])
 
   useEffect(() => {
     const fetchHomeData = async () => {

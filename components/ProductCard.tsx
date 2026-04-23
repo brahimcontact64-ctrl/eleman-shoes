@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { optimizeImage } from '@/lib/cloudinary'
+import { getOptimizedImage } from '@/lib/cloudinary'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { Product, Brand } from '@/lib/types'
 import { Button } from './ui/button'
@@ -57,7 +57,7 @@ getImage(product?.images?.[0]) ||
 '/placeholder.png'
 ,[activeColor?.images, getImage, product?.colors, product?.images])
 
-const imageSrc = optimizeImage(firstImage, 600) || '/placeholder.png'
+const imageSrc = getOptimizedImage(firstImage, 600) || '/placeholder.png'
 /* PRICE */
 
 const finalPrice = useMemo(

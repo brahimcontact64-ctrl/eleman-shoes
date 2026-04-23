@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { optimizeImage } from '@/lib/cloudinary';
+import { getOptimizedImage } from '@/lib/cloudinary';
 import {
   collection,
   getDocs,
@@ -470,7 +470,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       <div key={i} className="relative">
         <div className="relative w-20 h-20">
           <Image
-            src={optimizeImage(img.url, 200) || '/placeholder.png'}
+            src={getOptimizedImage(img.url, 200) || '/placeholder.png'}
             alt={`Image couleur ${i + 1}`}
             fill
             sizes="80px"

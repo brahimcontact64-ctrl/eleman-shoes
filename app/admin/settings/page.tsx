@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { optimizeImage } from '@/lib/cloudinary';
+import { getOptimizedImage } from '@/lib/cloudinary';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -196,7 +196,7 @@ export default function SettingsPage() {
                       <div className="mt-2">
                         <div className="relative w-full h-48 rounded-lg overflow-hidden">
                           <Image
-                            src={optimizeImage(settings.heroImage, 1200) || '/whatsapp_image_2026-02-03_at_11.14.37.jpeg'}
+                            src={getOptimizedImage(settings.heroImage, 1200) || '/whatsapp_image_2026-02-03_at_11.14.37.jpeg'}
                             alt="Hero preview"
                             fill
                             sizes="100vw"
@@ -598,7 +598,7 @@ export default function SettingsPage() {
                         <p className="text-sm text-leather-gray mb-2">Aperçu du logo:</p>
                         <div className="relative h-20 w-40">
                           <Image
-                            src={optimizeImage(settings.logoUrl, 200) || '/okp.jpeg'}
+                            src={getOptimizedImage(settings.logoUrl, 200) || '/okp.jpeg'}
                             alt="Logo preview"
                             fill
                             sizes="160px"

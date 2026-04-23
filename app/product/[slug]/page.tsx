@@ -25,7 +25,7 @@ import { formatPrice } from '@/lib/firebase/utils'
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { optimizeImage } from '@/lib/cloudinary'
+import { getOptimizedImage } from '@/lib/cloudinary'
 
 const WhatsAppButton = dynamic(() => import('@/components/WhatsAppButton'), {
   ssr: false,
@@ -293,7 +293,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                 {currentImage &&(
 
                   <Image
-                    src={optimizeImage(currentImage, 900) || '/placeholder.png'}
+                    src={getOptimizedImage(currentImage, 900) || '/placeholder.png'}
                     alt={product.name}
                     fill
                     loading="lazy"
@@ -325,7 +325,7 @@ export default function ProductPage({ params }: ProductPageProps) {
                     >
 
                       <Image
-                        src={optimizeImage(img, 200) || '/placeholder.png'}
+                        src={getOptimizedImage(img, 200) || '/placeholder.png'}
                         alt={`Image ${i+1}`}
                         fill
                         loading="lazy"

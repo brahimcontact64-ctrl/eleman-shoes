@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { optimizeImage } from '@/lib/cloudinary';
+import { getOptimizedImage } from '@/lib/cloudinary';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from './ui/button';
 import { Menu, X } from 'lucide-react';
@@ -18,7 +18,7 @@ export default function Navbar() {
   const [companyName,setCompanyName] = useState('Eleman Shoes');
   const [logoUrl,setLogoUrl] = useState('/okp.jpeg');
 
-  const optimizedLogoUrl = useMemo(() => optimizeImage(logoUrl, 96) || '/okp.jpeg', [logoUrl]);
+  const optimizedLogoUrl = useMemo(() => getOptimizedImage(logoUrl, 96) || '/okp.jpeg', [logoUrl]);
 
   useEffect(()=>{
 

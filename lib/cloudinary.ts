@@ -1,51 +1,17 @@
-const CLOUDINARY_CLOUD_NAME =
-  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'devq3prkj'
+const hasFlag = (url: string, flag: string): boolean => {
+  return new RegExp(`(?:^|[,/])${flag}(?:,|/|$)`).test(url);
+};
 
-const hasTransformFlag = (url: string, flag: string): boolean =>
-  new RegExp(`(?:^|[,/])${flag}(?:,|/|$)`).test(url)
+export const getOptimizedImage = (url: string, width = 400): string => {
+  if (!url) return "";
 
-const hasWidthTransform = (url: string): boolean =>
-  /(?:^|[,/])w_\d+(?:,|/|$)/.test(url)
+  const cloudName = "devq3prkj"; 
 
-/**
- * Returns a Cloudinary-optimized URL with automatic format/quality and a
- * bounded width to reduce payload size, especially on mobile networks.
- */
-export const optimizeImage = (url: string, width = 400): string => {
-  if (!url) return ''
+  let transforms = "f_auto,q_auto";
 
-  if (url.startsWith('/')) return url
-
-  const safeWidth = Math.max(80, Math.round(width || 400))
-  const baseTransform = `f_auto,q_auto,w_${safeWidth}`
-
-  if (url.includes('res.cloudinary.com')) {
-    if (url.includes('/image/upload/')) {
-      const hasAuto = hasTransformFlag(url, 'f_auto') && hasTransformFlag(url, 'q_auto')
-      const hasWidth = hasWidthTransform(url)
-
-      if (hasAuto && hasWidth) return url
-
-      const transform = hasAuto ? `w_${safeWidth}` : baseTransform
-      return url.replace('/image/upload/', `/image/upload/${transform}/`)
-    }
-
-    if (url.includes('/image/fetch/')) {
-      const hasAuto = hasTransformFlag(url, 'f_auto') && hasTransformFlag(url, 'q_auto')
-      const hasWidth = hasWidthTransform(url)
-
-      if (hasAuto && hasWidth) return url
-
-      const transform = hasAuto ? `w_${safeWidth}` : baseTransform
-      return url.replace('/image/fetch/', `/image/fetch/${transform}/`)
-    }
-
-    return url
+  if (!hasFlag(url, "w_")) {
+    transforms += `,w_${width}`;
   }
 
-  if (/^https?:\/\//i.test(url)) {
-    return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/fetch/${baseTransform}/${encodeURIComponent(url)}`
-  }
-
-  return url
-}
+  return `https://res.cloudinary.com/${cloudName}/image/fetch/${transforms}/${encodeURIComponent(url)}`;
+};

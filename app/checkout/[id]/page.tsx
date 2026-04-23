@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import PromoBanner from '@/components/PromoBanner';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { optimizeImage } from '@/lib/cloudinary';
+import { getOptimizedImage } from '@/lib/cloudinary';
 import {
   doc,
   getDoc,
@@ -480,7 +480,7 @@ useEffect(() => {
   )}
 
   <Image
-    src={optimizeImage(displayImage, 900) || '/placeholder.png'}
+    src={getOptimizedImage(displayImage, 900) || '/placeholder.png'}
     alt={product.name}
     fill
     loading="lazy"
@@ -504,7 +504,7 @@ useEffect(() => {
                         >
                           <div className="relative w-14 h-14">
                             <Image
-                              src={optimizeImage(img.url, 180) || '/placeholder.png'}
+                              src={getOptimizedImage(img.url, 180) || '/placeholder.png'}
                               alt={`${product.name}-${i + 1}`}
                               fill
                               loading="lazy"
@@ -572,7 +572,7 @@ useEffect(() => {
                   >
                     <div className="relative aspect-square mb-2">
                       <Image
-                        src={optimizeImage(p.colors?.[0]?.images?.[0]?.url ?? '', 400) || '/placeholder.png'}
+                        src={getOptimizedImage(p.colors?.[0]?.images?.[0]?.url ?? '', 400) || '/placeholder.png'}
                         alt={p.name}
                         fill
                         loading="lazy"
@@ -599,7 +599,7 @@ useEffect(() => {
         <DialogContent className="max-w-4xl bg-white">
           <div className="relative w-full aspect-square">
             <Image
-              src={optimizeImage(displayImage, 1200) || '/placeholder.png'}
+              src={getOptimizedImage(displayImage, 1200) || '/placeholder.png'}
               alt={product.name}
               fill
               loading="lazy"

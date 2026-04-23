@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { optimizeImage } from '@/lib/cloudinary';
+import { getOptimizedImage } from '@/lib/cloudinary';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Brand } from '@/lib/types';
@@ -169,7 +169,7 @@ export default function BrandsPage() {
                       <Label>Aperçu du logo</Label>
                       <div className="relative w-32 h-32 border border-leather-light/30 rounded p-2">
                         <Image
-                          src={optimizeImage(formData.logo, 200) || '/placeholder.png'}
+                          src={getOptimizedImage(formData.logo, 200) || '/placeholder.png'}
                           alt="Logo preview"
                           fill
                           sizes="128px"
@@ -217,7 +217,7 @@ export default function BrandsPage() {
                           {brand.logo ? (
                             <div className="relative w-16 h-16">
                               <Image
-                                src={optimizeImage(brand.logo, 100) || '/placeholder.png'}
+                                src={getOptimizedImage(brand.logo, 100) || '/placeholder.png'}
                                 alt={brand.name}
                                 fill
                                 sizes="64px"

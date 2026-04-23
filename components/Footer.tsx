@@ -5,7 +5,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase/config'
 import Link from 'next/link'
 import Image from 'next/image'
-import { optimizeImage } from '@/lib/cloudinary'
+import { getOptimizedImage } from '@/lib/cloudinary'
 
 import {
 Phone,
@@ -44,7 +44,7 @@ logoUrl:'/okp.jpeg'
 
 const optimizedLogoUrl = useMemo(() => {
 const logo = settings.logoUrl && settings.logoUrl.length > 0 ? settings.logoUrl : '/okp.jpeg'
-return optimizeImage(logo, 160) || '/okp.jpeg'
+return getOptimizedImage(logo, 160) || '/okp.jpeg'
 }, [settings.logoUrl])
 
 useEffect(()=>{
