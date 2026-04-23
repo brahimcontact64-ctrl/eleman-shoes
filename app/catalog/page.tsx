@@ -12,9 +12,7 @@ import {
 import { db } from '@/lib/firebase/config';
 import { Product, Brand, Category } from '@/lib/types';
 
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import ProductCard from '@/components/ProductCard';
+import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 
 import { Input } from '@/components/ui/input';
 import {
@@ -28,9 +26,15 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Search } from 'lucide-react';
 
+const Navbar = dynamic(() => import('@/components/Navbar'));
+const Footer = dynamic(() => import('@/components/Footer'));
+const ProductCard = dynamic(() => import('@/components/ProductCard'));
+
 const WhatsAppButton = dynamic(() => import('@/components/WhatsAppButton'), {
   ssr: false,
 });
+
+const REVALIDATE_MS = 60 * 1000;
 
 export default function CatalogPage() {
 
@@ -65,7 +69,7 @@ export default function CatalogPage() {
 
       if (cacheRaw) {
         const cache = JSON.parse(cacheRaw);
-        const isFresh = Date.now() - cache.timestamp < 1000 * 60 * 5;
+        const isFresh = Date.now() - cache.timestamp < REVALIDATE_MS;
 
         if (isFresh) {
           setProducts(cache.products || []);
@@ -218,11 +222,24 @@ setPromotions(promotionsMap)
 
     return(
 
-      <div className="flex items-center justify-center min-h-screen bg-leather-beige">
+      <>
 
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-leather-brown"/>
+        <Navbar/>
 
-      </div>
+        <main className="min-h-screen bg-leather-beige">
+          <div className="container mx-auto px-4 py-8">
+            <h1 className="text-4xl font-bold mb-8 text-leather-dark">{t('all_products')}</h1>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, idx) => (
+                <ProductCardSkeleton key={`catalog-skeleton-${idx}`} />
+              ))}
+            </div>
+          </div>
+        </main>
+
+        <Footer/>
+
+      </>
 
     );
 
@@ -349,13 +366,14 @@ setPromotions(promotionsMap)
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-              {filteredProducts.map((product)=>(
+              {filteredProducts.map((product, index)=>(
 
                 <ProductCard
   key={product.id}
   product={product}
   brand={brands.get(product.brandId)}
-  promotion={promotions?.[product.id]} 
+  promotion={promotions?.[product.id]}
+  priority={index < 2}
 />
               ))}
 

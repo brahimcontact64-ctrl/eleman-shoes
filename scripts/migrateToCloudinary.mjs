@@ -7,6 +7,7 @@ import {
   doc,
 } from "firebase/firestore";
 import { v2 as cloudinary } from "cloudinary";
+import sharp from "sharp";
 
 // ─── Firebase config ────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -94,6 +95,73 @@ function formatCloudinaryError(err) {
   return parts.length ? parts.join(" | ") : String(err);
 }
 
+function isLargeFileOrBadRequest(err) {
+  const msg =
+    err?.message || err?.error?.message || err?.response?.error?.message || "";
+  return (
+    err?.http_code === 400 ||
+    /file size too large/i.test(msg) ||
+    /maximum is 10485760/i.test(msg)
+  );
+}
+
+async function fetchAndCompressImage(rawUrl, productId) {
+  const url = sanitizeUrl(rawUrl);
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(
+      `[${productId}] Download failed: HTTP ${response.status} ${response.statusText}`
+    );
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const inputBuffer = Buffer.from(arrayBuffer);
+
+  // Keep quality visually solid while getting under Cloudinary remote limits.
+  const outputBuffer = await sharp(inputBuffer)
+    .rotate()
+    .resize({ width: 1600, fit: "inside", withoutEnlargement: true })
+    .jpeg({ quality: 80, mozjpeg: true })
+    .toBuffer();
+
+  return outputBuffer;
+}
+
+function uploadCompressedBuffer(buffer, productId) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: "products",
+        resource_type: "image",
+        format: "jpg",
+        use_filename: true,
+        unique_filename: true,
+        overwrite: false,
+      },
+      (err, result) => {
+        if (err) {
+          reject(
+            new Error(
+              `[${productId}] Stream upload failed: ${formatCloudinaryError(err)}`
+            )
+          );
+          return;
+        }
+
+        if (!result?.secure_url) {
+          reject(new Error(`[${productId}] Stream upload missing secure_url`));
+          return;
+        }
+
+        resolve(result.secure_url);
+      }
+    );
+
+    stream.end(buffer);
+  });
+}
+
 /**
  * Uploads a URL to Cloudinary with sanitization and exponential-backoff retry.
  * Returns the secure_url or throws after MAX_RETRIES attempts.
@@ -116,20 +184,45 @@ async function uploadWithRetry(rawUrl, productId) {
       });
       return res.secure_url;
     } catch (err) {
-      lastErr = err;
-      const detail = formatCloudinaryError(err);
+      let activeError = err;
+      const detail = formatCloudinaryError(activeError);
+
+      if (isLargeFileOrBadRequest(activeError)) {
+        console.warn(
+          `  ⚠️  [${productId}] Remote upload rejected (${detail}). Trying local compress + stream upload...`
+        );
+
+        try {
+          const compressed = await fetchAndCompressImage(rawUrl, productId);
+          const streamedUrl = await uploadCompressedBuffer(compressed, productId);
+          console.log(`  ✅ [${productId}] Fallback stream upload successful.`);
+          return streamedUrl;
+        } catch (fallbackErr) {
+          activeError = fallbackErr;
+          console.error(`  ❌ [${productId}] Fallback failed: ${fallbackErr?.message || fallbackErr}`);
+          if (fallbackErr?.stack) {
+            console.error(`     Stack       : ${fallbackErr.stack}`);
+          }
+        }
+      }
+
+      lastErr = activeError;
+      const finalDetail = formatCloudinaryError(activeError);
       const delay = RETRY_DELAY_MS * attempt;
+
       if (attempt < MAX_RETRIES) {
         console.warn(
           `  ⚠️  [${productId}] Attempt ${attempt}/${MAX_RETRIES} failed. Retrying in ${delay}ms…`
         );
-        console.warn(`     Error: ${detail}`);
+        console.warn(`     Error: ${finalDetail}`);
         await new Promise((r) => setTimeout(r, delay));
       } else {
         console.error(`  ❌ [${productId}] All ${MAX_RETRIES} attempts failed.`);
         console.error(`     Source URL  : ${rawUrl}`);
-        console.error(`     Final error : ${detail}`);
-        if (err.stack) console.error(`     Stack       : ${err.stack}`);
+        console.error(`     Final error : ${finalDetail}`);
+        if (activeError?.stack) {
+          console.error(`     Stack       : ${activeError.stack}`);
+        }
       }
     }
   }

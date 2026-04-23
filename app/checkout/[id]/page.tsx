@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import PromoBanner from '@/components/PromoBanner';
+import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { getOptimizedImage } from '@/lib/cloudinary';
@@ -17,8 +17,9 @@ import {
 import { db } from '@/lib/firebase/config';
 import { Product, Brand, DeliveryZone } from '@/lib/types';
 
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+const Navbar = dynamic(() => import('@/components/Navbar'));
+const Footer = dynamic(() => import('@/components/Footer'));
+const PromoBanner = dynamic(() => import('@/components/PromoBanner'));
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +45,8 @@ import { toast } from 'sonner';
 
 const BLUR_DATA_URL =
   'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+
+const REVALIDATE_MS = 60 * 1000;
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -77,7 +80,10 @@ export default function CheckoutPage() {
 
   /* ================= DERIVED ================= */
 
-  const selectedZone = zones.find(z => z.wilaya === wilaya);
+  const selectedZone = useMemo(
+    () => zones.find(z => z.wilaya === wilaya),
+    [zones, wilaya]
+  );
 
   const deliveryPrice = selectedZone
     ? deliveryType === 'home'
@@ -121,13 +127,20 @@ export default function CheckoutPage() {
       .map((s: any) => s.size);
   }, [selectedColor]);
 
- const unitPrice = promotion ? promotion.newPrice : product?.price || 0;
+  const unitPrice = useMemo(
+    () => (promotion ? promotion.newPrice : product?.price || 0),
+    [promotion, product?.price]
+  );
 
-const total =
-  product ? unitPrice * quantity + deliveryPrice : 0;
+  const total = useMemo(
+    () => (product ? unitPrice * quantity + deliveryPrice : 0),
+    [deliveryPrice, product, quantity, unitPrice]
+  );
 
-  const isOutOfStock =
-    !selectedSize || remainingStock <= 0 || quantity > remainingStock;
+  const isOutOfStock = useMemo(
+    () => !selectedSize || remainingStock <= 0 || quantity > remainingStock,
+    [quantity, remainingStock, selectedSize]
+  );
 
   /* ================= EFFECTS ================= */
 
@@ -139,7 +152,7 @@ const total =
 
     if (cacheRaw) {
       const cache = JSON.parse(cacheRaw);
-      const isFresh = Date.now() - cache.timestamp < 1000 * 60 * 10;
+      const isFresh = Date.now() - cache.timestamp < REVALIDATE_MS;
       if (isFresh) {
         setZones(cache.zones || []);
         return;
@@ -171,7 +184,7 @@ const total =
 
       if (cacheRaw) {
         const cache = JSON.parse(cacheRaw);
-        const isFresh = Date.now() - cache.timestamp < 1000 * 60 * 5;
+        const isFresh = Date.now() - cache.timestamp < REVALIDATE_MS;
         if (isFresh) {
           setProduct(cache.product || null);
           setPromotion(cache.promotion || null);
@@ -289,16 +302,6 @@ useEffect(() => {
   }
 
 }, [product]);
-
-  /* ================= PRELOAD IMAGES ================= */
-
-  useEffect(() => {
-    if (!colorImages.length) return;
-    colorImages.forEach(img => {
-      const i = new window.Image();
-      i.src = img.url;
-    });
-  }, [colorImages]);
 
   useEffect(() => {
     setSelectedImageIndex(0);
@@ -483,7 +486,7 @@ useEffect(() => {
     src={getOptimizedImage(displayImage, 900) || '/placeholder.png'}
     alt={product.name}
     fill
-    loading="lazy"
+    priority
     sizes="(max-width: 1024px) 100vw, 42vw"
     quality={62}
     placeholder="blur"

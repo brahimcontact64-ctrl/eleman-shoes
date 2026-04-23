@@ -19,13 +19,15 @@ interface ProductCardProps {
   brand?: Brand
   promotion?: any
   colorsMap?: Record<string,string>
+  priority?: boolean
 }
 
 function ProductCard({
   product,
   brand,
   promotion,
-  colorsMap = {}
+  colorsMap = {},
+  priority = false
 }: ProductCardProps){
 
 const { t } = useLanguage()
@@ -121,9 +123,10 @@ return(
 src={imageSrc}
 alt={product.name}
 fill
+priority={priority}
+loading={priority ? 'eager' : 'lazy'}
 sizes="(max-width:768px) 50vw, (max-width:1200px) 33vw, 25vw"
 quality={55}
-loading="lazy"
 placeholder="blur"
 blurDataURL={BLUR_DATA_URL}
 className="object-cover"
