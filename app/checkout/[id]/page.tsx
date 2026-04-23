@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { getOptimizedImage } from '@/lib/cloudinary';
 import {
@@ -19,7 +20,9 @@ import { Product, Brand, DeliveryZone } from '@/lib/types';
 
 const Navbar = dynamic(() => import('@/components/Navbar'));
 const Footer = dynamic(() => import('@/components/Footer'));
-const PromoBanner = dynamic(() => import('@/components/PromoBanner'));
+const PromoBanner = dynamic(() => import('@/components/PromoBanner'), {
+  ssr: false,
+});
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -91,8 +94,10 @@ export default function CheckoutPage() {
       : selectedZone.stopdesk
     : 0;
 
-  const selectedColor =
-    product?.colors?.find(c => c.colorId === selectedColorId) || null;
+  const selectedColor = useMemo(
+    () => product?.colors?.find(c => c.colorId === selectedColorId) || null,
+    [product?.colors, selectedColorId]
+  );
 
 
   const colorImages = useMemo(
@@ -114,11 +119,6 @@ export default function CheckoutPage() {
   }, [selectedColor, selectedSize]);
 
   const remainingStock = selectedSizeEntry?.stock ?? 0;
-
-  const remainingAfterSelection = Math.max(
-    remainingStock - quantity,
-    0
-  );
 
   const availableSizes = useMemo(() => {
     if (!selectedColor?.sizes) return [];
@@ -279,29 +279,67 @@ export default function CheckoutPage() {
 useEffect(() => {
   if (!product) return;
 
-  // ✅ Facebook InitiateCheckout
-  if (typeof window !== 'undefined' && (window as any).fbq) {
-    (window as any).fbq('track', 'InitiateCheckout', {
+  let cancelled = false;
+  let idleCallbackId: number | null = null;
+  let fallbackIdleTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  let retryId: ReturnType<typeof setTimeout> | null = null;
+  let retries = 0;
+
+  const fireEvents = () => {
+    if (cancelled) return;
+
+    const fbq = (window as any).fbq;
+    const ttq = (window as any).ttq;
+
+    if (!fbq || !ttq) {
+      if (retries < 12) {
+        retries += 1;
+        retryId = setTimeout(fireEvents, 250);
+      }
+      return;
+    }
+
+    fbq('track', 'InitiateCheckout', {
       content_name: product.name,
       content_ids: [product.id],
       content_type: 'product',
       value: promotion ? promotion.newPrice : product.price,
       currency: 'DZD',
     });
-  }
 
-  // ✅ TikTok InitiateCheckout
-  if (typeof window !== 'undefined' && (window as any).ttq) {
-    (window as any).ttq.track('InitiateCheckout', {
+    ttq.track('InitiateCheckout', {
       content_id: product.id,
       content_name: product.name,
       content_type: 'product',
       value: product.price,
       currency: 'DZD',
     });
+  };
+
+  if ('requestIdleCallback' in window) {
+    idleCallbackId = window.requestIdleCallback(fireEvents);
+  } else {
+    fallbackIdleTimeoutId = setTimeout(fireEvents, 200);
   }
 
-}, [product]);
+  return () => {
+    cancelled = true;
+
+    if (idleCallbackId !== null) {
+      if ('cancelIdleCallback' in window) {
+        window.cancelIdleCallback(idleCallbackId);
+      }
+    }
+
+    if (fallbackIdleTimeoutId !== null) {
+      clearTimeout(fallbackIdleTimeoutId);
+    }
+
+    if (retryId !== null) {
+      clearTimeout(retryId);
+    }
+  };
+}, [product, promotion]);
 
   useEffect(() => {
     setSelectedImageIndex(0);
@@ -395,7 +433,48 @@ useEffect(() => {
 
   /* ================= RENDER ================= */
 
-  if (loading || !product) return null;
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <PromoBanner />
+        <main className="min-h-screen bg-leather-beige py-8">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-pulse">
+              <div className="order-2 lg:order-1 lg:col-span-7 space-y-6">
+                <div className="h-56 bg-white rounded border" />
+                <div className="h-56 bg-white rounded border" />
+                <div className="h-12 bg-white rounded border" />
+              </div>
+              <div className="order-1 lg:order-2 lg:col-span-5">
+                <div className="h-[620px] bg-white rounded border" />
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  if (!product) {
+    return (
+      <>
+        <Navbar />
+        <main className="min-h-screen bg-leather-beige py-8">
+          <div className="container mx-auto px-4 text-center">
+            <h1 className="text-2xl font-semibold text-leather-dark mb-4">
+              Produit introuvable
+            </h1>
+            <Link href="/catalog" className="underline text-leather-brown">
+              Retour au catalogue
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
@@ -487,6 +566,7 @@ useEffect(() => {
     alt={product.name}
     fill
     priority
+    fetchPriority="high"
     sizes="(max-width: 1024px) 100vw, 42vw"
     quality={62}
     placeholder="blur"

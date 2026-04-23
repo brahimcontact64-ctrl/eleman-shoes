@@ -1,12 +1,11 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import Script from 'next/script'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
-import { AuthProvider } from '@/contexts/AuthContext'
 import { LanguageProvider } from '@/contexts/LanguageContext'
 import { Toaster } from '@/components/ui/toaster'
+import CheckoutAnalyticsScripts from '@/components/CheckoutAnalyticsScripts'
 
 /* ================= FONT ================= */
 
@@ -92,85 +91,21 @@ export default function RootLayout({
         {/* Improve image loading from Firebase */}
         <link rel="preconnect" href="https://firebasestorage.googleapis.com" />
         <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
+        <link rel="preconnect" href="https://res.cloudinary.com" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
       </head>
 
       <body
         className={`${inter.variable} font-sans antialiased bg-leather-beige text-leather-dark`}
       >
-        {/* ================= META PIXEL ================= */}
-
-        <Script id="meta-pixel" strategy="lazyOnload">
-          {`
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}
-(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-
-fbq('init', '2657224451323629');
-fbq('track', 'PageView');
-`}
-        </Script>
-
-        {/* ================= TIKTOK PIXEL ================= */}
-
-        <Script
-          id="tiktok-pixel"
-          strategy="lazyOnload"
-          dangerouslySetInnerHTML={{
-            __html: `
-!function (w, d, t) {
-w.TiktokAnalyticsObject=t;
-var ttq=w[t]=w[t]||[];
-ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"];
-ttq.setAndDefer=function(t,e){
-t[e]=function(){
-t.push([e].concat(Array.prototype.slice.call(arguments,0)))
-}
-};
-for(var i=0;i<ttq.methods.length;i++)
-ttq.setAndDefer(ttq,ttq.methods[i]);
-
-ttq.load=function(e){
-var s=d.createElement("script");
-s.type="text/javascript";
-s.async=true;
-s.src="https://analytics.tiktok.com/i18n/pixel/events.js?sdkid="+e;
-var x=d.getElementsByTagName("script")[0];
-x.parentNode.insertBefore(s,x);
-};
-
-ttq.load('D66PQ7BC77U3SSVRP740');
-ttq.page();
-}(window, document, 'ttq');
-`,
-          }}
-        />
-
-        {/* ================= NOSCRIPT ================= */}
-
-        <noscript>
-          <img
-            height="1"
-            width="1"
-            style={{ display: 'none' }}
-            src="https://www.facebook.com/tr?id=2657224451323629&ev=PageView&noscript=1"
-            alt=""
-          />
-        </noscript>
+        <CheckoutAnalyticsScripts />
 
         {/* ================= PROVIDERS ================= */}
 
-        <AuthProvider>
-          <LanguageProvider>
-            {children}
-            <Toaster />
-          </LanguageProvider>
-        </AuthProvider>
+        <LanguageProvider>
+          {children}
+          <Toaster />
+        </LanguageProvider>
 
         {/* ================= VERCEL SPEED ================= */}
 

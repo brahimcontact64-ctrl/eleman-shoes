@@ -59,7 +59,7 @@ getImage(product?.images?.[0]) ||
 '/placeholder.png'
 ,[activeColor?.images, getImage, product?.colors, product?.images])
 
-const imageSrc = getOptimizedImage(firstImage, 600) || '/placeholder.png'
+const imageSrc = getOptimizedImage(firstImage, 480) || '/placeholder.png'
 /* PRICE */
 
 const finalPrice = useMemo(
@@ -124,6 +124,7 @@ src={imageSrc}
 alt={product.name}
 fill
 priority={priority}
+fetchPriority={priority ? 'high' : 'auto'}
 loading={priority ? 'eager' : 'lazy'}
 sizes="(max-width:768px) 50vw, (max-width:1200px) 33vw, 25vw"
 quality={55}

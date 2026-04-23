@@ -12,6 +12,7 @@ import {
 import { db } from '@/lib/firebase/config';
 import { Product, Brand, Category } from '@/lib/types';
 
+import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 
 import { Input } from '@/components/ui/input';
@@ -28,7 +29,6 @@ import { Search } from 'lucide-react';
 
 const Navbar = dynamic(() => import('@/components/Navbar'));
 const Footer = dynamic(() => import('@/components/Footer'));
-const ProductCard = dynamic(() => import('@/components/ProductCard'));
 
 const WhatsAppButton = dynamic(() => import('@/components/WhatsAppButton'), {
   ssr: false,
@@ -50,12 +50,17 @@ export default function CatalogPage() {
 
 
   const [searchTerm,setSearchTerm] = useState('');
+  const [searchInput,setSearchInput] = useState('');
   const [filterBrand,setFilterBrand] = useState('all');
   const [filterCategory,setFilterCategory] = useState('all');
 
-  useEffect(()=>{
-    fetchData();
-  },[]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTerm(searchInput);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   /* ================= FETCH DATA ================= */
 
@@ -174,6 +179,10 @@ setPromotions(promotionsMap)
 
   },[]);
 
+  useEffect(()=>{
+    fetchData();
+  },[fetchData]);
+
   /* ================= FILTER ================= */
 
   const filteredProducts = useMemo(()=>{
@@ -271,8 +280,8 @@ setPromotions(promotionsMap)
 
                 <Input
                   placeholder={t('search')}
-                  value={searchTerm}
-                  onChange={(e)=>setSearchTerm(e.target.value)}
+                  value={searchInput}
+                  onChange={(e)=>setSearchInput(e.target.value)}
                   className="pl-10"
                 />
 
