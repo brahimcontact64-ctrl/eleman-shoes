@@ -14,6 +14,7 @@ import {
 import { db } from '@/lib/firebase/config';
 import { Product, Brand, Category } from '@/lib/types';
 import { getOptimizedImage } from '@/lib/cloudinary';
+import { dedupeCategories } from '@/lib/categories';
 
 import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/ProductCardSkeleton';
@@ -135,7 +136,11 @@ export default function CatalogPage() {
 
         if (isFresh) {
           setProducts(cache.products || []);
-          setCategories(cache.categories || []);
+          setCategories(
+            dedupeCategories(cache.categories || []).filter(
+              (category) => category.isActive !== false
+            )
+          );
           setPromotions(cache.promotions || {});
           setBrands(new Map(cache.brands || []));
           setLoading(false);
@@ -195,10 +200,14 @@ setPromotions(promotionsMap)
 
       /* ================= CATEGORIES ================= */
 
-      const categoriesData = categoriesSnapshot.docs.map((doc)=>({
+      const rawCategories = categoriesSnapshot.docs.map((doc)=>({
         id:doc.id,
         ...doc.data()
       })) as Category[];
+
+      const categoriesData = dedupeCategories(rawCategories).filter(
+        (category) => category.isActive !== false
+      );
 
       setCategories(categoriesData);
 

@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "migrate": "node scripts/migrateToCloudinary.mjs"
+    "migrate": "node scripts/migrateToCloudinary.mjs",
+    "repair-categories": "npx tsx scripts/repairCategories.ts"
   },
   "dependencies": {
     "@netlify/plugin-nextjs": "^5.15.1",

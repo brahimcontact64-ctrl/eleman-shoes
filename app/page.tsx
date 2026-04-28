@@ -18,6 +18,7 @@ import {
 
 import { db } from '@/lib/firebase/config'
 import { Product, Brand, Category } from '@/lib/types'
+import { dedupeCategories } from '@/lib/categories'
 
 import Navbar from '@/components/Navbar'
 import PromoBanner from '@/components/PromoBanner'
@@ -174,7 +175,7 @@ setColorsMap(colors)
 
         /* ================= PRODUCTS ================= */
 
-        const categoriesData = categoriesSnapshot.docs
+        const rawCategories = categoriesSnapshot.docs
           .map((catDoc, index) => ({
             id: catDoc.id,
             ...(catDoc.data() as Partial<Category>),
@@ -185,7 +186,9 @@ setColorsMap(colors)
             isActive: catDoc.data().isActive !== false,
             isFeatured: Boolean(catDoc.data().isFeatured),
             showOnHome: catDoc.data().showOnHome !== false,
-          }))
+          })) as Category[]
+
+        const categoriesData = dedupeCategories(rawCategories)
           .filter((category) => category.isActive)
           .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)) as Category[]
 

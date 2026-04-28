@@ -15,6 +15,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase/config';
 import { Product, Brand, Category } from '@/lib/types';
+import { dedupeCategories } from '@/lib/categories';
 import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/admin/ProtectedRoute';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -118,7 +119,8 @@ export default function AdminProductsPage() {
   ]);
 
   setBrands(brandsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Brand[]);
-  setCategories(categoriesSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Category[]);
+  const rawCategories = categoriesSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Category[];
+  setCategories(dedupeCategories(rawCategories));
   setProducts(productsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Product[]);
 const colorsData: AvailableColor[] = colorsSnap.docs.map((d) => ({
   id: d.id,

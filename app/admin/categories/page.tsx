@@ -21,10 +21,11 @@ import {
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
-import { db, storage } from '@/lib/firebase/config';
+import { auth, db, storage } from '@/lib/firebase/config';
 import { Category, Product } from '@/lib/types';
 import { generateSlug } from '@/lib/firebase/utils';
 import { getOptimizedImage } from '@/lib/cloudinary';
+import { dedupeCategories, normalizeCategoryName, normalizeCategorySlug } from '@/lib/categories';
 import { useAuth } from '@/contexts/AuthContext';
 
 import ProtectedRoute from '@/components/admin/ProtectedRoute';
@@ -186,6 +187,7 @@ export default function AdminCategoriesPage() {
   const [dragIndex,    setDragIndex]        = useState<number | null>(null);
   const [dragOverIdx,  setDragOverIdx]      = useState<number | null>(null);
   const [reordering,   setReordering]       = useState(false);
+  const [repairing,    setRepairing]        = useState(false);
 
   /* ── search / filter / page ── */
   const [search,        setSearch]       = useState('');
@@ -248,7 +250,7 @@ export default function AdminCategoriesPage() {
         } as Category;
       });
 
-      setCategories(catsData);
+      setCategories(dedupeCategories(catsData));
       setProducts(prodsSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Product[]);
     } catch (err) {
       console.error(err);
@@ -352,6 +354,40 @@ export default function AdminCategoriesPage() {
       toast({ title: 'Nom requis', variant: 'destructive' });
       return;
     }
+
+    const normalizedName = normalizeCategoryName(form.name);
+    const normalizedSlug = normalizeCategorySlug(generateSlug(form.slug || form.name));
+
+    const duplicateName = categories.find(
+      (c) =>
+        c.id !== editingCategory?.id &&
+        normalizeCategoryName(c.name) === normalizedName
+    );
+
+    if (duplicateName) {
+      toast({
+        title: 'Nom déjà utilisé',
+        description: `La catégorie "${duplicateName.name}" existe déjà.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const duplicateSlug = categories.find(
+      (c) =>
+        c.id !== editingCategory?.id &&
+        normalizeCategorySlug(c.slug) === normalizedSlug
+    );
+
+    if (duplicateSlug) {
+      toast({
+        title: 'Slug déjà utilisé',
+        description: `Le slug "${duplicateSlug.slug}" est déjà pris.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const slug        = generateSlug(form.slug || form.name);
@@ -386,6 +422,50 @@ export default function AdminCategoriesPage() {
       toast({ title: 'Erreur lors de la sauvegarde', variant: 'destructive' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRepairCategories = async () => {
+    try {
+      setRepairing(true);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        toast({ title: 'Session expirée', variant: 'destructive' });
+        return;
+      }
+
+      const response = await fetch('/api/admin/categories/repair', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        toast({
+          title: 'Réparation impossible',
+          description: payload?.error || 'Erreur inconnue',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Réparation terminée',
+        description: `Doublons supprimés: ${payload.report?.duplicateDocsRemoved || 0}`,
+      });
+
+      await fetchData();
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Erreur de réparation',
+        description: 'Impossible d\'exécuter la réparation des catégories',
+        variant: 'destructive',
+      });
+    } finally {
+      setRepairing(false);
     }
   };
 
@@ -582,10 +662,17 @@ export default function AdminCategoriesPage() {
               </p>
             </div>
 
-            <Button onClick={openCreateDialog}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle catégorie
-            </Button>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Button variant="outline" onClick={handleRepairCategories} disabled={repairing}>
+                  {repairing ? 'Réparation...' : 'Repair Categories'}
+                </Button>
+              )}
+              <Button onClick={openCreateDialog}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nouvelle catégorie
+              </Button>
+            </div>
           </div>
 
           {/* ─── Search / Filter bar ─── */}
