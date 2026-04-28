@@ -1,6 +1,12 @@
-'use client';
+﻿'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import Image from 'next/image';
 import {
   addDoc,
@@ -19,10 +25,10 @@ import { db, storage } from '@/lib/firebase/config';
 import { Category, Product } from '@/lib/types';
 import { generateSlug } from '@/lib/firebase/utils';
 import { getOptimizedImage } from '@/lib/cloudinary';
+import { useAuth } from '@/contexts/AuthContext';
 
 import ProtectedRoute from '@/components/admin/ProtectedRoute';
 import AdminLayout from '@/components/admin/AdminLayout';
-
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -31,6 +37,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -45,708 +52,943 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Copy,
+  FolderOpen,
+  GripVertical,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  TriangleAlert,
+} from 'lucide-react';
 
-import { GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
+/* ======================================================
+   TYPES
+====================================================== */
 
 type CategoryForm = {
   name: string;
   slug: string;
   description: string;
   coverImage: string;
-  icon: string;
   sortOrder: number;
   isFeatured: boolean;
   isActive: boolean;
   showOnHome: boolean;
 };
 
-const emptyForm: CategoryForm = {
+type DeleteTarget = {
+  category: Category;
+  productCount: number;
+  reassignTo: string;
+};
+
+type FilterStatus = 'all' | 'active' | 'inactive';
+
+const EMPTY_FORM: CategoryForm = {
   name: '',
   slug: '',
   description: '',
   coverImage: '',
-  icon: '',
   sortOrder: 0,
   isFeatured: false,
   isActive: true,
   showOnHome: true,
 };
 
+const SEED_CATEGORIES = [
+  { name: 'Casual',   description: 'Chaussures casual pour tous les jours' },
+  { name: 'Classic',  description: 'Chaussures classiques intemporelles' },
+  { name: 'Sport',    description: 'Chaussures sportives et confortables' },
+  { name: 'Sandales', description: "Sandales légères pour l'été" },
+];
+
+const PAGE_SIZE = 10;
+
+/* ======================================================
+   SKELETON ROW
+====================================================== */
+
+function TableSkeleton() {
+  return (
+    <div className="rounded-xl border bg-white overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-8 w-24" />
+      </div>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 px-4 py-3 border-b last:border-0">
+          <Skeleton className="h-4 w-4" />
+          <Skeleton className="h-12 w-12 rounded-md flex-shrink-0" />
+          <div className="flex-1 space-y-1">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+          <Skeleton className="h-6 w-10" />
+          <Skeleton className="h-6 w-10" />
+          <Skeleton className="h-6 w-10" />
+          <Skeleton className="h-6 w-10" />
+          <Skeleton className="h-5 w-6" />
+          <Skeleton className="h-8 w-20" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ======================================================
+   MAIN PAGE
+====================================================== */
+
 export default function AdminCategoriesPage() {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const isAdmin = user?.role === 'admin';
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  /* ── data ── */
+  const [categories, setCategories]   = useState<Category[]>([]);
+  const [products,   setProducts]     = useState<Product[]>([]);
+  const [loading,    setLoading]      = useState(true);
+  const [seeding,    setSeeding]      = useState(false);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  /* ── form / dialog ── */
+  const [dialogOpen,        setDialogOpen]        = useState(false);
+  const [saving,            setSaving]            = useState(false);
+  const [editingCategory,   setEditingCategory]   = useState<Category | null>(null);
+  const [form,              setForm]              = useState<CategoryForm>(EMPTY_FORM);
+  const [coverFile,         setCoverFile]         = useState<File | null>(null);
+  const [coverPreview,      setCoverPreview]      = useState('');
 
-  const [form, setForm] = useState<CategoryForm>(emptyForm);
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
-  const [coverFile, setCoverFile] = useState<File | null>(null);
+  /* ── delete ── */
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [reordering, setReordering] = useState(false);
+  /* ── drag & drop ── */
+  const dragItemRef                         = useRef<number | null>(null);
+  const [dragIndex,    setDragIndex]        = useState<number | null>(null);
+  const [dragOverIdx,  setDragOverIdx]      = useState<number | null>(null);
+  const [reordering,   setReordering]       = useState(false);
+
+  /* ── search / filter / page ── */
+  const [search,        setSearch]       = useState('');
+  const [filterStatus,  setFilterStatus] = useState<FilterStatus>('all');
+  const [page,          setPage]         = useState(1);
+
+  /* ───────────────────────────────────────────
+     DERIVED
+  ─────────────────────────────────────────── */
 
   const productCountByCategory = useMemo(() => {
     const map = new Map<string, number>();
     products.forEach((p) => {
       if (!p.categoryId) return;
-      map.set(p.categoryId, (map.get(p.categoryId) || 0) + 1);
+      map.set(p.categoryId, (map.get(p.categoryId) ?? 0) + 1);
     });
     return map;
   }, [products]);
 
+  const filteredCategories = useMemo(() => {
+    const q = search.toLowerCase();
+    return categories.filter((c) => {
+      if (q && !c.name.toLowerCase().includes(q) && !c.slug.toLowerCase().includes(q)) return false;
+      if (filterStatus === 'active'   && c.isActive === false)   return false;
+      if (filterStatus === 'inactive' && c.isActive !== false)   return false;
+      return true;
+    });
+  }, [categories, search, filterStatus]);
+
+  const totalPages      = Math.max(1, Math.ceil(filteredCategories.length / PAGE_SIZE));
+  const pagedCategories = filteredCategories.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  /* ───────────────────────────────────────────
+     FETCH
+  ─────────────────────────────────────────── */
+
   const fetchData = useCallback(async () => {
     try {
-      const [categoriesSnap, productsSnap] = await Promise.all([
+      const [catsSnap, prodsSnap] = await Promise.all([
         getDocs(query(collection(db, 'categories'), orderBy('sortOrder', 'asc'))),
         getDocs(collection(db, 'products')),
       ]);
 
-      const categoriesData = categoriesSnap.docs.map((d, index) => {
-        const data = d.data() as Partial<Category>;
+      const catsData: Category[] = catsSnap.docs.map((d, i) => {
+        const raw = d.data() as Record<string, any>;
         return {
-          id: d.id,
-          name: data.name || 'Sans nom',
-          slug: data.slug || generateSlug(data.name || `categorie-${index + 1}`),
-          description: data.description || '',
-          coverImage: data.coverImage || '',
-          icon: data.icon || '',
-          sortOrder: typeof data.sortOrder === 'number' ? data.sortOrder : data.order || index,
-          order: typeof data.order === 'number' ? data.order : index,
-          isFeatured: Boolean(data.isFeatured),
-          isActive: data.isActive !== false,
-          showOnHome: data.showOnHome !== false,
-          createdAt: data.createdAt as any,
-          updatedAt: data.updatedAt as any,
+          id:          d.id,
+          name:        raw.name        || 'Sans nom',
+          slug:        raw.slug        || generateSlug(raw.name || `cat-${i}`),
+          description: raw.description || '',
+          coverImage:  raw.coverImage  || '',
+          icon:        raw.icon        || '',
+          sortOrder:   typeof raw.sortOrder === 'number' ? raw.sortOrder : (raw.order ?? i),
+          order:       typeof raw.order     === 'number' ? raw.order     : i,
+          isFeatured:  Boolean(raw.isFeatured),
+          isActive:    raw.isActive !== false,
+          showOnHome:  raw.showOnHome !== false,
+          createdAt:   raw.createdAt,
+          updatedAt:   raw.updatedAt,
         } as Category;
       });
 
-      const productsData = productsSnap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      })) as Product[];
-
-      setCategories(categoriesData);
-      setProducts(productsData);
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de charger les catégories',
-        variant: 'destructive',
-      });
+      setCategories(catsData);
+      setProducts(prodsSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Product[]);
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Erreur de chargement', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   }, [toast]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  /* ───────────────────────────────────────────
+     SEED
+  ─────────────────────────────────────────── */
+
+  const handleSeed = async () => {
+    setSeeding(true);
+    try {
+      const batch = writeBatch(db);
+      SEED_CATEGORIES.forEach((cat, i) => {
+        const docRef = doc(collection(db, 'categories'));
+        batch.set(docRef, {
+          name:        cat.name,
+          slug:        generateSlug(cat.name),
+          description: cat.description,
+          coverImage:  '',
+          sortOrder:   i,
+          order:       i,
+          isFeatured:  i < 2,
+          isActive:    true,
+          showOnHome:  true,
+          createdAt:   serverTimestamp(),
+          updatedAt:   serverTimestamp(),
+        });
+      });
+      await batch.commit();
+      toast({ title: 'Catégories créées', description: '4 catégories par défaut ajoutées.' });
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Erreur seeding', variant: 'destructive' });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  /* ───────────────────────────────────────────
+     FORM HELPERS
+  ─────────────────────────────────────────── */
 
   const resetForm = () => {
-    setForm(emptyForm);
-    setSelectedProductIds([]);
+    setForm(EMPTY_FORM);
     setCoverFile(null);
+    setCoverPreview('');
     setEditingCategory(null);
   };
 
   const openCreateDialog = () => {
     resetForm();
+    setForm((p) => ({ ...p, sortOrder: categories.length }));
     setDialogOpen(true);
   };
 
-  const openEditDialog = (category: Category) => {
-    setEditingCategory(category);
+  const openEditDialog = (cat: Category) => {
+    setEditingCategory(cat);
     setForm({
-      name: category.name || '',
-      slug: category.slug || '',
-      description: category.description || '',
-      coverImage: category.coverImage || '',
-      icon: category.icon || '',
-      sortOrder: category.sortOrder ?? category.order ?? 0,
-      isFeatured: Boolean(category.isFeatured),
-      isActive: category.isActive !== false,
-      showOnHome: category.showOnHome !== false,
+      name:        cat.name        || '',
+      slug:        cat.slug        || '',
+      description: cat.description || '',
+      coverImage:  cat.coverImage  || '',
+      sortOrder:   cat.sortOrder   ?? (cat.order ?? 0),
+      isFeatured:  Boolean(cat.isFeatured),
+      isActive:    cat.isActive  !== false,
+      showOnHome:  cat.showOnHome !== false,
     });
-
-    setSelectedProductIds(
-      products
-        .filter((p) => p.categoryId === category.id)
-        .map((p) => p.id)
-    );
-
     setCoverFile(null);
+    setCoverPreview('');
     setDialogOpen(true);
   };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
+  };
+
+  /* ───────────────────────────────────────────
+     SAVE
+  ─────────────────────────────────────────── */
 
   const uploadCoverIfNeeded = async (slug: string): Promise<string> => {
     if (!coverFile) return form.coverImage;
-
-    const storageRef = ref(
-      storage,
-      `categories/${slug}/${Date.now()}_${coverFile.name}`
-    );
+    const storageRef = ref(storage, `categories/${slug}/${Date.now()}_${coverFile.name}`);
     await uploadBytes(storageRef, coverFile);
     return getDownloadURL(storageRef);
   };
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      toast({
-        title: 'Nom requis',
-        description: 'Le nom de la catégorie est obligatoire',
-        variant: 'destructive',
-      });
+      toast({ title: 'Nom requis', variant: 'destructive' });
       return;
     }
-
     setSaving(true);
-
     try {
-      const slug = generateSlug(form.slug || form.name);
-      const coverImage = await uploadCoverIfNeeded(slug);
+      const slug        = generateSlug(form.slug || form.name);
+      const coverImage  = await uploadCoverIfNeeded(slug);
 
       const payload = {
-        name: form.name.trim(),
+        name:        form.name.trim(),
         slug,
         description: form.description.trim(),
         coverImage,
-        icon: form.icon.trim(),
-        sortOrder: Number(form.sortOrder) || 0,
-        order: Number(form.sortOrder) || 0,
-        isFeatured: form.isFeatured,
-        isActive: form.isActive,
-        showOnHome: form.showOnHome,
-        updatedAt: serverTimestamp(),
+        sortOrder:   Number(form.sortOrder) || 0,
+        order:       Number(form.sortOrder) || 0,
+        isFeatured:  form.isFeatured,
+        isActive:    form.isActive,
+        showOnHome:  form.showOnHome,
+        updatedAt:   serverTimestamp(),
       };
-
-      let categoryId = editingCategory?.id;
 
       if (editingCategory) {
         await updateDoc(doc(db, 'categories', editingCategory.id), payload);
+        toast({ title: 'Catégorie mise à jour' });
       } else {
-        const nextOrder = categories.length;
-        const newDoc = await addDoc(collection(db, 'categories'), {
-          ...payload,
-          sortOrder: nextOrder,
-          order: nextOrder,
-          createdAt: serverTimestamp(),
-        });
-        categoryId = newDoc.id;
+        await addDoc(collection(db, 'categories'), { ...payload, createdAt: serverTimestamp() });
+        toast({ title: 'Catégorie créée' });
       }
-
-      if (categoryId) {
-        const selectedSet = new Set(selectedProductIds);
-        const currentlyAssigned = products
-          .filter((p) => p.categoryId === categoryId)
-          .map((p) => p.id);
-
-        const updatesNeeded = new Set<string>([
-          ...currentlyAssigned,
-          ...selectedProductIds,
-        ]);
-
-        if (updatesNeeded.size > 0) {
-          const batch = writeBatch(db);
-          updatesNeeded.forEach((productId) => {
-            const productRef = doc(db, 'products', productId);
-            if (selectedSet.has(productId)) {
-              batch.update(productRef, {
-                categoryId,
-                updatedAt: serverTimestamp(),
-              });
-            }
-          });
-
-          currentlyAssigned
-            .filter((pid) => !selectedSet.has(pid))
-            .forEach((productId) => {
-              const productRef = doc(db, 'products', productId);
-              batch.update(productRef, {
-                categoryId: '',
-                updatedAt: serverTimestamp(),
-              });
-            });
-
-          await batch.commit();
-        }
-      }
-
-      toast({
-        title: 'Succès',
-        description: editingCategory
-          ? 'Catégorie mise à jour'
-          : 'Catégorie créée',
-      });
 
       setDialogOpen(false);
       resetForm();
       await fetchData();
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de sauvegarder la catégorie',
-        variant: 'destructive',
-      });
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Erreur lors de la sauvegarde', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSoftDelete = async (category: Category) => {
-    if (!confirm(`Désactiver la catégorie "${category.name}" ?`)) return;
+  /* ───────────────────────────────────────────
+     DUPLICATE
+  ─────────────────────────────────────────── */
 
+  const handleDuplicate = async (cat: Category) => {
     try {
-      await updateDoc(doc(db, 'categories', category.id), {
-        isActive: false,
-        isFeatured: false,
-        showOnHome: false,
-        updatedAt: serverTimestamp(),
+      const baseName = `${cat.name} (copie)`;
+      await addDoc(collection(db, 'categories'), {
+        name:        baseName,
+        slug:        generateSlug(baseName),
+        description: cat.description || '',
+        coverImage:  cat.coverImage  || '',
+        sortOrder:   categories.length,
+        order:       categories.length,
+        isFeatured:  false,
+        isActive:    false,
+        showOnHome:  false,
+        createdAt:   serverTimestamp(),
+        updatedAt:   serverTimestamp(),
       });
-
-      toast({
-        title: 'Catégorie désactivée',
-        description: 'La catégorie est maintenant inactive',
-      });
-
+      toast({ title: 'Catégorie dupliquée', description: `"${baseName}" créée (inactive)` });
       await fetchData();
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de désactiver cette catégorie',
-        variant: 'destructive',
-      });
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Erreur duplication', variant: 'destructive' });
     }
   };
 
-  const handleToggle = async (
-    category: Category,
-    key: 'isActive' | 'isFeatured' | 'showOnHome',
-    value: boolean
-  ) => {
-    try {
-      await updateDoc(doc(db, 'categories', category.id), {
-        [key]: value,
-        updatedAt: serverTimestamp(),
-      });
+  /* ───────────────────────────────────────────
+     DELETE (soft)
+  ─────────────────────────────────────────── */
 
-      setCategories((prev) =>
-        prev.map((c) =>
-          c.id === category.id
-            ? {
-                ...c,
-                [key]: value,
-              }
-            : c
-        )
-      );
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: 'Erreur',
-        description: 'Mise à jour impossible',
-        variant: 'destructive',
-      });
-    }
+  const openDeleteDialog = (cat: Category) => {
+    setDeleteTarget({
+      category:     cat,
+      productCount: productCountByCategory.get(cat.id) ?? 0,
+      reassignTo:   '',
+    });
   };
 
-  const persistSortOrder = async (next: Category[]) => {
-    setReordering(true);
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { category, productCount, reassignTo } = deleteTarget;
 
     try {
       const batch = writeBatch(db);
-      next.forEach((cat, index) => {
+
+      batch.update(doc(db, 'categories', category.id), {
+        isActive:    false,
+        isFeatured:  false,
+        showOnHome:  false,
+        updatedAt:   serverTimestamp(),
+      });
+
+      if (reassignTo && productCount > 0) {
+        products
+          .filter((p) => p.categoryId === category.id)
+          .forEach((p) => {
+            batch.update(doc(db, 'products', p.id), {
+              categoryId: reassignTo,
+              updatedAt:  serverTimestamp(),
+            });
+          });
+      }
+
+      await batch.commit();
+      toast({
+        title: 'Catégorie désactivée',
+        description: reassignTo && productCount > 0
+          ? `${productCount} produit(s) réassigné(s).`
+          : 'Produits non modifiés.',
+      });
+      setDeleteTarget(null);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Erreur de suppression', variant: 'destructive' });
+    }
+  };
+
+  /* ───────────────────────────────────────────
+     INLINE TOGGLE
+  ─────────────────────────────────────────── */
+
+  const handleToggle = async (
+    cat:   Category,
+    key:   'isActive' | 'isFeatured' | 'showOnHome',
+    value: boolean,
+  ) => {
+    // optimistic
+    setCategories((prev) => prev.map((c) => c.id === cat.id ? { ...c, [key]: value } : c));
+    try {
+      await updateDoc(doc(db, 'categories', cat.id), { [key]: value, updatedAt: serverTimestamp() });
+    } catch (err) {
+      console.error(err);
+      // revert
+      setCategories((prev) => prev.map((c) => c.id === cat.id ? { ...c, [key]: !value } : c));
+      toast({ title: 'Mise à jour impossible', variant: 'destructive' });
+    }
+  };
+
+  /* ───────────────────────────────────────────
+     DRAG & DROP
+  ─────────────────────────────────────────── */
+
+  const onDragStart = (index: number) => {
+    dragItemRef.current = index;
+    setDragIndex(index);
+  };
+
+  const onDragEnter = (index: number) => setDragOverIdx(index);
+
+  const onDragEnd = async () => {
+    const from = dragItemRef.current;
+    const to   = dragOverIdx;
+    dragItemRef.current = null;
+    setDragIndex(null);
+    setDragOverIdx(null);
+
+    if (from === null || to === null || from === to) return;
+
+    const next = [...categories];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setCategories(next);
+
+    setReordering(true);
+    try {
+      const batch = writeBatch(db);
+      next.forEach((cat, i) => {
         batch.update(doc(db, 'categories', cat.id), {
-          sortOrder: index,
-          order: index,
+          sortOrder: i,
+          order:     i,
           updatedAt: serverTimestamp(),
         });
       });
       await batch.commit();
-
-      toast({
-        title: 'Ordre mis à jour',
-        description: 'Le tri des catégories est enregistré',
-      });
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible d’enregistrer le nouvel ordre',
-        variant: 'destructive',
-      });
+      toast({ title: 'Ordre enregistré' });
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Erreur de tri', variant: 'destructive' });
       await fetchData();
     } finally {
       setReordering(false);
     }
   };
 
-  const onDropRow = async (toIndex: number) => {
-    if (dragIndex === null || dragIndex === toIndex) return;
-
-    const next = [...categories];
-    const [moved] = next.splice(dragIndex, 1);
-    next.splice(toIndex, 0, moved);
-
-    setCategories(next);
-    setDragIndex(null);
-    await persistSortOrder(next);
-  };
-
-  const displayedProducts = useMemo(
-    () => products.filter((p) => p.isActive !== false),
-    [products]
-  );
+  /* ───────────────────────────────────────────
+     RENDER — loading
+  ─────────────────────────────────────────── */
 
   if (loading) {
     return (
       <ProtectedRoute requirePermission="canManageProducts">
         <AdminLayout>
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-leather-brown" />
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Skeleton className="h-8 w-44" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+              <Skeleton className="h-10 w-44" />
+            </div>
+            <div className="flex gap-3">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-40" />
+            </div>
+            <TableSkeleton />
           </div>
         </AdminLayout>
       </ProtectedRoute>
     );
   }
 
+  /* ───────────────────────────────────────────
+     RENDER — main
+  ─────────────────────────────────────────── */
+
   return (
     <ProtectedRoute requirePermission="canManageProducts">
       <AdminLayout>
         <div className="space-y-6">
+
+          {/* ─── Header ─── */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h1 className="text-3xl font-bold text-leather-dark">Catégories</h1>
-              <p className="text-leather-gray">
-                Créez, éditez, triez et activez les catégories du storefront.
+              <p className="text-leather-gray text-sm mt-1">
+                {categories.length} catégorie{categories.length !== 1 ? 's' : ''}&nbsp;·&nbsp;
+                {products.length} produit{products.length !== 1 ? 's' : ''}
               </p>
             </div>
 
-            <Dialog
-              open={dialogOpen}
-              onOpenChange={(open) => {
-                setDialogOpen(open);
-                if (!open) resetForm();
-              }}
+            <Button onClick={openCreateDialog}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvelle catégorie
+            </Button>
+          </div>
+
+          {/* ─── Search / Filter bar ─── */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                placeholder="Rechercher par nom ou slug…"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              />
+            </div>
+            <Select
+              value={filterStatus}
+              onValueChange={(v) => { setFilterStatus(v as FilterStatus); setPage(1); }}
             >
-              <DialogTrigger asChild>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                <SelectItem value="active">Actives</SelectItem>
+                <SelectItem value="inactive">Inactives</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* ─── Empty state (no categories at all) ─── */}
+          {categories.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-24 rounded-xl border bg-white text-center gap-5">
+              <div className="w-16 h-16 rounded-full bg-leather-beige flex items-center justify-center">
+                <FolderOpen className="h-8 w-8 text-leather-brown" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-leather-dark">Aucune catégorie</h3>
+                <p className="text-leather-gray text-sm mt-1 max-w-xs mx-auto">
+                  Créez votre première catégorie ou chargez les valeurs par défaut.
+                </p>
+              </div>
+              <div className="flex gap-3 flex-wrap justify-center">
                 <Button onClick={openCreateDialog}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Nouvelle catégorie
+                  Créer une catégorie
                 </Button>
-              </DialogTrigger>
+                <Button variant="outline" disabled={seeding} onClick={handleSeed}>
+                  {seeding ? 'Chargement…' : '⚡ Charger Casual / Classic / Sport / Sandales'}
+                </Button>
+              </div>
+            </div>
+          )}
 
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingCategory ? 'Modifier la catégorie' : 'Nouvelle catégorie'}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Gérez les informations visibles sur la home, le catalogue et l’admin.
-                  </DialogDescription>
-                </DialogHeader>
+          {/* ─── Empty search result ─── */}
+          {categories.length > 0 && filteredCategories.length === 0 && (
+            <div className="py-14 text-center text-leather-gray rounded-xl border bg-white">
+              Aucune catégorie ne correspond à votre recherche.
+            </div>
+          )}
 
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="category-name">Nom</Label>
-                      <Input
-                        id="category-name"
-                        value={form.name}
-                        onChange={(e) => {
-                          const name = e.target.value;
-                          setForm((prev) => ({
-                            ...prev,
-                            name,
-                            slug: prev.slug || generateSlug(name),
-                          }));
-                        }}
-                        placeholder="Ex: Casual"
-                      />
-                    </div>
+          {/* ─── Table ─── */}
+          {filteredCategories.length > 0 && (
+            <div
+              className={`rounded-xl border bg-white overflow-hidden transition-opacity${reordering ? ' opacity-50 pointer-events-none' : ''}`}
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableHead className="w-10" />
+                    <TableHead className="w-16">Image</TableHead>
+                    <TableHead>Nom / Slug</TableHead>
+                    <TableHead className="w-24 text-center">Produits</TableHead>
+                    <TableHead className="w-28 text-center">Featured</TableHead>
+                    <TableHead className="w-28 text-center">Home</TableHead>
+                    <TableHead className="w-24 text-center">Active</TableHead>
+                    <TableHead className="w-20 text-center">Ordre</TableHead>
+                    <TableHead className="w-32 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pagedCategories.map((cat, pageIdx) => {
+                    const globalIdx  = (page - 1) * PAGE_SIZE + pageIdx;
+                    const count      = productCountByCategory.get(cat.id) ?? 0;
+                    const isDragging = dragIndex    === globalIdx;
+                    const isOver     = dragOverIdx  === globalIdx;
 
-                    <div className="space-y-2">
-                      <Label htmlFor="category-slug">Slug</Label>
-                      <Input
-                        id="category-slug"
-                        value={form.slug}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            slug: generateSlug(e.target.value),
-                          }))
-                        }
-                        placeholder="casual"
-                      />
-                    </div>
+                    return (
+                      <TableRow
+                        key={cat.id}
+                        draggable
+                        onDragStart={() => onDragStart(globalIdx)}
+                        onDragEnter={() => onDragEnter(globalIdx)}
+                        onDragEnd={onDragEnd}
+                        onDragOver={(e) => e.preventDefault()}
+                        className={[
+                          'transition-all select-none',
+                          isDragging  ? 'opacity-40 bg-muted/30'           : '',
+                          isOver      ? 'border-t-2 border-leather-brown'  : '',
+                          cat.isActive === false ? 'opacity-60' : '',
+                        ].filter(Boolean).join(' ')}
+                      >
+                        {/* Drag handle */}
+                        <TableCell>
+                          <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
+                        </TableCell>
+
+                        {/* Cover */}
+                        <TableCell>
+                          <div className="relative h-12 w-12 rounded-md overflow-hidden bg-leather-beige border flex-shrink-0">
+                            <Image
+                              src={getOptimizedImage(cat.coverImage || '', 120) || '/placeholder.png'}
+                              alt={cat.name}
+                              fill
+                              sizes="48px"
+                              className="object-cover"
+                            />
+                          </div>
+                        </TableCell>
+
+                        {/* Name + slug */}
+                        <TableCell>
+                          <p className="font-medium text-leather-dark leading-tight">{cat.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">/{cat.slug}</p>
+                        </TableCell>
+
+                        {/* Product count */}
+                        <TableCell className="text-center">
+                          <Badge variant={count > 0 ? 'default' : 'secondary'} className="font-mono text-xs">
+                            {count}
+                          </Badge>
+                        </TableCell>
+
+                        {/* Featured toggle */}
+                        <TableCell className="text-center">
+                          <Switch
+                            checked={Boolean(cat.isFeatured)}
+                            onCheckedChange={(v) => handleToggle(cat, 'isFeatured', v)}
+                          />
+                        </TableCell>
+
+                        {/* Show on Home toggle */}
+                        <TableCell className="text-center">
+                          <Switch
+                            checked={cat.showOnHome !== false}
+                            onCheckedChange={(v) => handleToggle(cat, 'showOnHome', v)}
+                          />
+                        </TableCell>
+
+                        {/* Active toggle */}
+                        <TableCell className="text-center">
+                          <Switch
+                            checked={cat.isActive !== false}
+                            onCheckedChange={(v) => handleToggle(cat, 'isActive', v)}
+                          />
+                        </TableCell>
+
+                        {/* Sort order */}
+                        <TableCell className="text-center text-sm text-muted-foreground">
+                          {cat.sortOrder ?? (cat.order ?? globalIdx)}
+                        </TableCell>
+
+                        {/* Actions */}
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Modifier"
+                              onClick={() => openEditDialog(cat)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Dupliquer"
+                              onClick={() => handleDuplicate(cat)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            {isAdmin && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title="Désactiver"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => openDeleteDialog(cat)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20 text-sm text-muted-foreground">
+                  <span>
+                    Page {page} / {totalPages}&nbsp;·&nbsp;{filteredCategories.length} résultats
+                  </span>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" disabled={page <= 1}          onClick={() => setPage((p) => p - 1)}>← Précédent</Button>
+                    <Button size="sm" variant="outline" disabled={page >= totalPages}  onClick={() => setPage((p) => p + 1)}>Suivant →</Button>
                   </div>
+                </div>
+              )}
+            </div>
+          )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="category-description">Description</Label>
-                    <Textarea
-                      id="category-description"
-                      value={form.description}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, description: e.target.value }))
-                      }
-                      placeholder="Description affichée sur le catalogue"
-                    />
-                  </div>
+        </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="category-cover">Image de couverture</Label>
-                      <Input
-                        id="category-cover"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setCoverFile(e.target.files?.[0] || null)}
-                      />
-                    </div>
+        {/* ═══════════════════════════════════════════
+            CREATE / EDIT DIALOG
+        ═══════════════════════════════════════════ */}
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editingCategory ? 'Modifier la catégorie' : 'Nouvelle catégorie'}
+              </DialogTitle>
+              <DialogDescription>
+                Les modifications apparaissent automatiquement sur la home et le catalogue.
+              </DialogDescription>
+            </DialogHeader>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="category-order">Sort Order</Label>
-                      <Input
-                        id="category-order"
-                        type="number"
-                        min={0}
-                        value={form.sortOrder}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            sortOrder: Number(e.target.value) || 0,
-                          }))
-                        }
-                        placeholder="0"
-                      />
-                    </div>
+            <div className="space-y-5 pt-2">
 
-                    <div className="space-y-2">
-                      <Label htmlFor="category-icon">Icône (optionnel)</Label>
-                      <Input
-                        id="category-icon"
-                        value={form.icon}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, icon: e.target.value }))
-                        }
-                        placeholder="sparkles"
-                      />
-                    </div>
-                  </div>
+              {/* Name + Slug */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cat-name">Nom *</Label>
+                  <Input
+                    id="cat-name"
+                    value={form.name}
+                    placeholder="Ex: Casual"
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setForm((p) => ({
+                        ...p,
+                        name,
+                        slug: editingCategory ? p.slug : generateSlug(name),
+                      }));
+                    }}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cat-slug">Slug</Label>
+                  <Input
+                    id="cat-slug"
+                    value={form.slug}
+                    placeholder="casual"
+                    onChange={(e) => setForm((p) => ({ ...p, slug: generateSlug(e.target.value) }))}
+                  />
+                </div>
+              </div>
 
-                  {(coverFile || form.coverImage) && (
-                    <div className="relative h-44 w-full rounded-md border overflow-hidden bg-white">
+              {/* Description */}
+              <div className="space-y-1.5">
+                <Label htmlFor="cat-desc">Description</Label>
+                <Textarea
+                  id="cat-desc"
+                  value={form.description}
+                  rows={3}
+                  placeholder="Description courte affichée dans le catalogue"
+                  onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                />
+              </div>
+
+              {/* Cover + Sort order */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cat-cover">Image de couverture</Label>
+                  <Input id="cat-cover" type="file" accept="image/*" onChange={handleCoverChange} />
+                  {(coverPreview || form.coverImage) && (
+                    <div className="relative h-36 rounded-md border overflow-hidden bg-white mt-2">
                       <Image
-                        src={
-                          coverFile
-                            ? URL.createObjectURL(coverFile)
-                            : getOptimizedImage(form.coverImage, 900) || '/placeholder.png'
-                        }
-                        alt={form.name || 'Aperçu catégorie'}
+                        src={coverPreview || (getOptimizedImage(form.coverImage, 800) ?? '/placeholder.png')}
+                        alt="Aperçu"
                         fill
-                        sizes="100vw"
+                        sizes="(max-width: 640px) 100vw, 320px"
                         className="object-cover"
                       />
                     </div>
                   )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center justify-between rounded-md border p-3">
-                      <Label>Active</Label>
-                      <Switch
-                        checked={form.isActive}
-                        onCheckedChange={(v) =>
-                          setForm((prev) => ({ ...prev, isActive: Boolean(v) }))
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between rounded-md border p-3">
-                      <Label>Featured</Label>
-                      <Switch
-                        checked={form.isFeatured}
-                        onCheckedChange={(v) =>
-                          setForm((prev) => ({ ...prev, isFeatured: Boolean(v) }))
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between rounded-md border p-3">
-                      <Label>Afficher sur Home</Label>
-                      <Switch
-                        checked={form.showOnHome}
-                        onCheckedChange={(v) =>
-                          setForm((prev) => ({ ...prev, showOnHome: Boolean(v) }))
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Assigner des produits</Label>
-                    <div className="max-h-56 overflow-y-auto border rounded-md p-3 space-y-2">
-                      {displayedProducts.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Aucun produit actif</p>
-                      ) : (
-                        displayedProducts.map((product) => {
-                          const checked = selectedProductIds.includes(product.id);
-                          return (
-                            <label
-                              key={product.id}
-                              className="flex items-center gap-2 text-sm"
-                            >
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(value) => {
-                                  setSelectedProductIds((prev) => {
-                                    if (value) return [...new Set([...prev, product.id])];
-                                    return prev.filter((id) => id !== product.id);
-                                  });
-                                }}
-                              />
-                              <span>{product.name}</span>
-                            </label>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                      Annuler
-                    </Button>
-                    <Button disabled={saving} onClick={handleSave}>
-                      {saving
-                        ? 'Sauvegarde...'
-                        : editingCategory
-                          ? 'Mettre à jour'
-                          : 'Créer'}
-                    </Button>
-                  </div>
                 </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cat-order">Sort Order</Label>
+                  <Input
+                    id="cat-order"
+                    type="number"
+                    min={0}
+                    value={form.sortOrder}
+                    placeholder="0"
+                    onChange={(e) => setForm((p) => ({ ...p, sortOrder: Number(e.target.value) || 0 }))}
+                  />
+                  <p className="text-xs text-muted-foreground">Ordre d&apos;affichage (0 = premier)</p>
+                </div>
+              </div>
 
-          <div className="rounded-md border bg-white overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[60px]">Tri</TableHead>
-                  <TableHead>Image</TableHead>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Produits</TableHead>
-                  <TableHead>Featured</TableHead>
-                  <TableHead>Home</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead>Sort Order</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category, index) => (
-                  <TableRow
-                    key={category.id}
-                    draggable
-                    onDragStart={() => setDragIndex(index)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => onDropRow(index)}
-                    className={reordering ? 'opacity-70' : ''}
-                  >
-                    <TableCell>
-                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="relative h-12 w-12 rounded-md overflow-hidden bg-leather-beige border">
-                        <Image
-                          src={
-                            getOptimizedImage(category.coverImage || '', 120) ||
-                            '/placeholder.png'
-                          }
-                          alt={category.name}
-                          fill
-                          sizes="48px"
-                          className="object-cover"
-                        />
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="font-medium">{category.name}</div>
-                      <div className="text-xs text-muted-foreground">/{category.slug}</div>
-                    </TableCell>
-
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {productCountByCategory.get(category.id) || 0}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell>
-                      <Switch
-                        checked={Boolean(category.isFeatured)}
-                        onCheckedChange={(v) =>
-                          handleToggle(category, 'isFeatured', Boolean(v))
-                        }
-                      />
-                    </TableCell>
-
-                    <TableCell>
-                      <Switch
-                        checked={category.showOnHome !== false}
-                        onCheckedChange={(v) =>
-                          handleToggle(category, 'showOnHome', Boolean(v))
-                        }
-                      />
-                    </TableCell>
-
-                    <TableCell>
-                      <Switch
-                        checked={category.isActive !== false}
-                        onCheckedChange={(v) =>
-                          handleToggle(category, 'isActive', Boolean(v))
-                        }
-                      />
-                    </TableCell>
-
-                    <TableCell>{category.sortOrder ?? category.order ?? index}</TableCell>
-
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEditDialog(category)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleSoftDelete(category)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+              {/* Toggles */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {(
+                  [
+                    { key: 'isActive'   as const, label: 'Active' },
+                    { key: 'isFeatured' as const, label: 'Featured' },
+                    { key: 'showOnHome' as const, label: 'Afficher sur Home' },
+                  ]
+                ).map(({ key, label }) => (
+                  <div key={key} className="flex items-center justify-between rounded-lg border p-3 bg-muted/20">
+                    <Label htmlFor={`dialog-toggle-${key}`} className="cursor-pointer text-sm">{label}</Label>
+                    <Switch
+                      id={`dialog-toggle-${key}`}
+                      checked={form[key]}
+                      onCheckedChange={(v) => setForm((p) => ({ ...p, [key]: v }))}
+                    />
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex justify-end gap-2 pt-1 border-t">
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
+                <Button disabled={saving} onClick={handleSave}>
+                  {saving ? 'Sauvegarde…' : editingCategory ? 'Mettre à jour' : 'Créer la catégorie'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* ═══════════════════════════════════════════
+            DELETE CONFIRM
+        ═══════════════════════════════════════════ */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <TriangleAlert className="h-5 w-5 text-amber-500" />
+                Désactiver &quot;{deleteTarget?.category.name}&quot;&nbsp;?
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 text-sm">
+                  <p>
+                    La catégorie sera masquée du storefront (<code>isActive = false</code>).
+                    Elle ne sera pas supprimée définitivement et peut être réactivée.
+                  </p>
+
+                  {deleteTarget && deleteTarget.productCount > 0 && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900 space-y-3">
+                      <p className="font-semibold flex items-center gap-1.5">
+                        <TriangleAlert className="h-4 w-4 flex-shrink-0" />
+                        Cette catégorie contient{' '}
+                        <strong>{deleteTarget.productCount} produit(s)</strong>.
+                        Vous pouvez les réassigner avant de désactiver.
+                      </p>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-amber-800">Réassigner vers (optionnel)</Label>
+                        <Select
+                          value={deleteTarget.reassignTo}
+                          onValueChange={(v) =>
+                            setDeleteTarget((prev) => prev ? { ...prev, reassignTo: v } : prev)
+                          }
+                        >
+                          <SelectTrigger className="bg-white border-amber-300 text-sm">
+                            <SelectValue placeholder="Garder sans catégorie" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Garder sans catégorie</SelectItem>
+                            {categories
+                              .filter((c) => c.id !== deleteTarget.category.id && c.isActive !== false)
+                              .map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                className="bg-destructive hover:bg-destructive/90 text-white"
+              >
+                Désactiver la catégorie
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </AdminLayout>
     </ProtectedRoute>
   );
