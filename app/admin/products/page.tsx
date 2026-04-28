@@ -101,6 +101,8 @@ export default function AdminProductsPage() {
 
   const [colors, setColors] = useState<ColorForm[]>([]);
 
+  const activeCategories = categories.filter((c) => c.isActive !== false);
+
   /* ================= FETCH ================= */
 
   useEffect(() => {
@@ -395,7 +397,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         <SelectValue placeholder="Catégorie" />
       </SelectTrigger>
       <SelectContent>
-        {categories.map(c => (
+        {activeCategories.map(c => (
           <SelectItem key={c.id} value={c.id}>
             {c.name}
           </SelectItem>

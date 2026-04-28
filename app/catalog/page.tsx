@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   collection,
   query,
@@ -11,9 +13,12 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Product, Brand, Category } from '@/lib/types';
+import { getOptimizedImage } from '@/lib/cloudinary';
 
 import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/ProductCardSkeleton';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 import { Input } from '@/components/ui/input';
 import {
@@ -39,6 +44,9 @@ const REVALIDATE_MS = 60 * 1000;
 export default function CatalogPage() {
 
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [products,setProducts] = useState<Product[]>([]);
 
@@ -54,6 +62,31 @@ export default function CatalogPage() {
   const [filterBrand,setFilterBrand] = useState('all');
   const [filterCategory,setFilterCategory] = useState('all');
 
+  const normalizeCategoryKey = useCallback(
+    (value: string) => value.trim().toLowerCase(),
+    []
+  );
+
+  const categoriesSorted = useMemo(
+    () =>
+      [...categories]
+        .filter((c) => c.isActive !== false)
+        .sort((a, b) => (a.sortOrder ?? a.order ?? 0) - (b.sortOrder ?? b.order ?? 0)),
+    [categories]
+  );
+
+  const selectedCategory = useMemo(
+    () =>
+      categoriesSorted.find(
+        (c) =>
+          c.slug === filterCategory ||
+          normalizeCategoryKey(c.name) === normalizeCategoryKey(filterCategory)
+      ) || null,
+    [categoriesSorted, filterCategory, normalizeCategoryKey]
+  );
+
+  const currentCategoryValue = selectedCategory?.slug || 'all';
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchTerm(searchInput);
@@ -61,6 +94,30 @@ export default function CatalogPage() {
 
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    setFilterCategory(categoryParam || 'all');
+  }, [searchParams]);
+
+  const handleCategoryChange = useCallback(
+    (next: string) => {
+      setFilterCategory(next);
+
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === 'all') {
+        params.delete('category');
+      } else {
+        params.set('category', next);
+      }
+
+      const queryString = params.toString();
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+        scroll: false,
+      });
+    },
+    [pathname, router, searchParams]
+  );
 
   /* ================= FETCH DATA ================= */
 
@@ -206,7 +263,7 @@ setPromotions(promotionsMap)
 
       if(
         filterCategory !== 'all' &&
-        p.categoryId !== filterCategory
+        (!selectedCategory || p.categoryId !== selectedCategory.id)
       ){
         return false;
       }
@@ -219,6 +276,7 @@ setPromotions(promotionsMap)
     searchTerm,
     filterBrand,
     filterCategory,
+    selectedCategory,
     products
   ]);
 
@@ -263,6 +321,56 @@ setPromotions(promotionsMap)
       <main className="min-h-screen bg-leather-beige">
 
         <div className="container mx-auto px-4 py-8">
+
+          <div className="sticky top-16 z-40 bg-leather-beige/95 backdrop-blur py-3 mb-5 border-b border-leather-light/20">
+            <div className="overflow-x-auto">
+              <div className="flex gap-2 min-w-max">
+                <Button
+                  variant={currentCategoryValue === 'all' ? 'default' : 'outline'}
+                  className={currentCategoryValue === 'all' ? 'bg-leather-brown text-white' : ''}
+                  onClick={() => handleCategoryChange('all')}
+                >
+                  Tous
+                </Button>
+                {categoriesSorted.map((category) => (
+                  <Button
+                    key={category.id}
+                    variant={selectedCategory?.id === category.id ? 'default' : 'outline'}
+                    className={selectedCategory?.id === category.id ? 'bg-leather-brown text-white' : ''}
+                    onClick={() => handleCategoryChange(category.slug)}
+                  >
+                    {category.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {selectedCategory && (
+            <div className="mb-8 rounded-2xl overflow-hidden border border-leather-light/30 bg-white">
+              <div className="grid grid-cols-1 md:grid-cols-3">
+                <div className="relative h-52 md:h-full">
+                  <Image
+                    src={getOptimizedImage(selectedCategory.coverImage || '', 1200) || '/placeholder.png'}
+                    alt={selectedCategory.name}
+                    fill
+                    loading="lazy"
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    className="object-cover"
+                  />
+                </div>
+                <div className="md:col-span-2 p-6">
+                  <h2 className="text-3xl font-bold text-leather-dark">{selectedCategory.name}</h2>
+                  <p className="text-leather-gray mt-3">
+                    {selectedCategory.description || 'Découvrez cette collection premium.'}
+                  </p>
+                  <Badge className="mt-4 bg-leather-light text-leather-dark">
+                    {filteredProducts.length} produits
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          )}
 
           <h1 className="text-4xl font-bold mb-8 text-leather-dark">
 
@@ -322,8 +430,8 @@ setPromotions(promotionsMap)
               </Select>
 
               <Select
-                value={filterCategory}
-                onValueChange={setFilterCategory}
+                value={currentCategoryValue}
+                onValueChange={handleCategoryChange}
               >
 
                 <SelectTrigger>
@@ -340,11 +448,11 @@ setPromotions(promotionsMap)
 
                   </SelectItem>
 
-                  {categories.map((category)=>(
+                  {categoriesSorted.map((category)=>(
 
                     <SelectItem
                       key={category.id}
-                      value={category.id}
+                      value={category.slug}
                     >
                       {category.name}
                     </SelectItem>

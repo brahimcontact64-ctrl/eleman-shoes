@@ -38,8 +38,14 @@ export interface Category {
   id: string;
   name: string;
   slug: string;
-  order: number;
+  description?: string;
+  coverImage?: string;
+  icon?: string;
+  sortOrder?: number;
+  order?: number;
+  isFeatured?: boolean;
   isActive: boolean;
+  showOnHome?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -107,6 +113,7 @@ export interface Product {
   slug: string;
   brandId: string;
   categoryId: string;
+  categoryIds?: string[];
   price: number;
 
   /** legacy (لا نلمسه) */
