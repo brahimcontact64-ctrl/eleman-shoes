@@ -1,8 +1,15 @@
-import { NextResponse } from 'next/server';
-
 import { uploadImage } from '@/lib/uploadImage';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
+
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Image upload failed.';
+};
 
 export async function POST(request: Request) {
   try {
@@ -10,16 +17,20 @@ export async function POST(request: Request) {
     const file = formData.get('file');
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: 'File is required.' }, { status: 400 });
+      return Response.json({ success: false, error: 'File is required.' }, { status: 400 });
     }
+
+    console.log('Incoming file:', file.name, file.size);
 
     const secureUrl = await uploadImage(file);
 
-    return NextResponse.json({ secure_url: secureUrl });
+    return Response.json({ success: true, secure_url: secureUrl });
   } catch (error) {
-    console.error('Upload image error:', error);
+    console.error('UPLOAD ERROR:', error);
 
-    const message = error instanceof Error ? error.message : 'Image upload failed.';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return Response.json(
+      { success: false, error: getErrorMessage(error) },
+      { status: 500 }
+    );
   }
 }

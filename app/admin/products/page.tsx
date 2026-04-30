@@ -61,12 +61,18 @@ type SizeStock = {
   stock: number;
 };
 
+type UploadFailure = {
+  fileName: string;
+  reason: string;
+};
+
 type ColorForm = {
   name: string;
   existingImages: { url: string }[];
   sizes: SizeStock[];
   isUploading?: boolean;
   hasUploadError?: boolean;
+  uploadFailures?: UploadFailure[];
 };
 type AvailableColor = {
   id: string;
@@ -74,6 +80,18 @@ type AvailableColor = {
   hexCode?: string;
   isActive?: boolean;
   order?: number;
+};
+
+const formatUploadError = (error: unknown, file: File) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (!navigator.onLine) {
+    return `${file.name}: network error.`;
+  }
+
+  return `${file.name}: server error.`;
 };
 
 /* ================= COMPONENT ================= */
@@ -147,6 +165,7 @@ const addColor = () =>
       sizes: STANDARD_SIZES.map(s => ({ size: s, stock: 0 })),
       isUploading: false,
       hasUploadError: false,
+      uploadFailures: [],
     },
   ]);
 
@@ -188,6 +207,7 @@ setColors(
     }),
     isUploading: false,
     hasUploadError: false,
+    uploadFailures: [],
   })) || []
 );
 
@@ -198,22 +218,30 @@ setColors(
     const data = new FormData();
     data.append('file', file);
 
-    const response = await fetch('/api/upload-image', {
-      method: 'POST',
-      body: data,
-    });
+    try {
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: data,
+      });
 
-    const json = await response.json().catch(() => ({}));
+      const json = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
-      throw new Error(json?.error || 'Image upload failed');
+      if (!response.ok) {
+        if (response.status === 413) {
+          throw new Error(`${file.name}: image too large for server upload.`);
+        }
+
+        throw new Error(json?.error ? `${file.name}: ${json.error}` : `${file.name}: image upload failed.`);
+      }
+
+      if (!json?.secure_url) {
+        throw new Error(`${file.name}: upload succeeded without secure URL.`);
+      }
+
+      return getOptimizedImage(json.secure_url, 1200);
+    } catch (error) {
+      throw new Error(formatUploadError(error, file));
     }
-
-    if (!json?.secure_url) {
-      throw new Error('Upload succeeded without secure URL');
-    }
-
-    return getOptimizedImage(json.secure_url, 1200);
   };
 
   const uploadColorFiles = async (colorIndex: number, files: File[]) => {
@@ -226,15 +254,37 @@ setColors(
         ...next[colorIndex],
         isUploading: true,
         hasUploadError: false,
+        uploadFailures: [],
       };
       return next;
     });
 
-    const uploaded = await Promise.allSettled(files.map((file) => uploadSingleImage(file)));
+    const uploaded = await Promise.allSettled(
+      files.map(async (file) => ({
+        fileName: file.name,
+        url: await uploadSingleImage(file),
+      }))
+    );
     const successfulUrls = uploaded
-      .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
-      .map((result) => result.value);
-    const failedUploads = uploaded.filter((result) => result.status === 'rejected');
+      .filter(
+        (result): result is PromiseFulfilledResult<{ fileName: string; url: string }> =>
+          result.status === 'fulfilled'
+      )
+      .map((result) => result.value.url);
+    const failedUploads = uploaded.flatMap((result, index) => {
+      if (result.status === 'fulfilled') {
+        return [];
+      }
+
+      const file = files[index];
+
+      return [
+        {
+          fileName: file?.name || `Image ${index + 1}`,
+          reason: file ? formatUploadError(result.reason, file) : `Image ${index + 1}: server error.`,
+        },
+      ];
+    });
 
     setColors((prev) => {
       const next = [...prev];
@@ -248,6 +298,7 @@ setColors(
         ],
         isUploading: false,
         hasUploadError: failedUploads.length > 0,
+        uploadFailures: failedUploads,
       };
 
       return next;
@@ -256,7 +307,7 @@ setColors(
     if (failedUploads.length > 0) {
       toast({
         title: 'Erreur upload',
-        description: `${failedUploads.length} image(s) n'ont pas pu etre uploadees.`,
+        description: failedUploads.map((failure) => `${failure.fileName}: ${failure.reason}`).join(' | '),
         variant: 'destructive',
       });
     }
@@ -553,6 +604,15 @@ const handleSubmit = async (e: React.FormEvent) => {
         />
         {color.isUploading && (
           <p className="text-sm text-muted-foreground">Uploading...</p>
+        )}
+        {color.uploadFailures && color.uploadFailures.length > 0 && (
+          <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {color.uploadFailures.map((failure) => (
+              <p key={`${failure.fileName}-${failure.reason}`}>
+                {failure.fileName}: {failure.reason}
+              </p>
+            ))}
+          </div>
         )}
         {color.existingImages && color.existingImages.length > 0 && (
   <div className="flex flex-wrap gap-2 mt-2">
