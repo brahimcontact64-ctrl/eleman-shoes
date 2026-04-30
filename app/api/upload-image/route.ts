@@ -8,7 +8,7 @@ const getErrorMessage = (error: unknown) => {
     return error.message;
   }
 
-  return 'Image upload failed.';
+  return 'unknown error';
 };
 
 export async function POST(request: Request) {
@@ -26,7 +26,8 @@ export async function POST(request: Request) {
 
     return Response.json({ success: true, secure_url: secureUrl });
   } catch (error) {
-    console.error('UPLOAD ERROR:', error);
+    console.error('UPLOAD ERROR FULL:', error);
+    console.error('STACK:', error instanceof Error ? error.stack : undefined);
 
     return Response.json(
       { success: false, error: getErrorMessage(error) },

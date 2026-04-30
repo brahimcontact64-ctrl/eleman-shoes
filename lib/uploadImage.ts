@@ -28,12 +28,32 @@ type PreparedUpload = {
   usedCompression: boolean;
 };
 
+type CloudinaryEnvStatus = {
+  env: boolean;
+  cloud_name: string;
+  hasKey: boolean;
+  hasSecret: boolean;
+};
+
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) {
     return error.message;
   }
 
   return 'Unknown upload error.';
+};
+
+export const getCloudinaryEnvStatus = (): CloudinaryEnvStatus => {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || '';
+  const hasKey = !!process.env.CLOUDINARY_API_KEY;
+  const hasSecret = !!process.env.CLOUDINARY_API_SECRET;
+
+  return {
+    env: !!cloudName && hasKey && hasSecret,
+    cloud_name: cloudName,
+    hasKey,
+    hasSecret,
+  };
 };
 
 const resolveMimeType = (file: File) => {
@@ -55,21 +75,21 @@ const ensureCloudinaryConfig = () => {
     return;
   }
 
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  const envStatus = getCloudinaryEnvStatus();
 
-  if (!cloudName || !apiKey || !apiSecret) {
-    throw new Error('Cloudinary environment variables are missing.');
+  console.log('Cloudinary config:', envStatus);
+
+  if (!envStatus.env) {
+    throw new Error('Cloudinary env not configured');
   }
 
   cloudinary.config({
-    cloud_name: cloudName,
-    api_key: apiKey,
-    api_secret: apiSecret,
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
   });
 
-  console.log('Cloudinary configured for cloud:', cloudName);
+  console.log('Cloudinary configured for cloud:', envStatus.cloud_name);
 
   isCloudinaryConfigured = true;
 };
@@ -78,45 +98,52 @@ const shouldCompressImage = (size: number, width?: number) => {
   return size > MAX_IMAGE_BYTES || (typeof width === 'number' && width > MAX_IMAGE_WIDTH);
 };
 
-const maybeCompressImage = async (inputBuffer: Buffer, sourceSize: number): Promise<PreparedUpload> => {
-  try {
-    const image = sharp(inputBuffer, { failOn: 'none' }).rotate();
-    const metadata = await image.metadata();
+const compressWithSharp = async (inputBuffer: Buffer, sourceSize: number) => {
+  const image = sharp(inputBuffer, { failOn: 'none' }).rotate();
+  const metadata = await image.metadata();
 
-    if (!shouldCompressImage(sourceSize, metadata.width)) {
-      return {
-        buffer: inputBuffer,
-        usedCompression: false,
-      };
-    }
-
-    const compressedBuffer = await image
-      .resize({
-        width: MAX_IMAGE_WIDTH,
-        fit: 'inside',
-        withoutEnlargement: true,
-      })
-      .jpeg({
-        quality: 80,
-        mozjpeg: true,
-      })
-      .toBuffer();
-
-    console.log('Compression succeeded:', {
-      originalBytes: sourceSize,
-      compressedBytes: compressedBuffer.byteLength,
-      width: metadata.width,
-      height: metadata.height,
-    });
-
-    return {
-      buffer: compressedBuffer,
-      usedCompression: true,
-    };
-  } catch (error) {
-    console.error('IMAGE COMPRESSION FAILED, FALLING BACK TO ORIGINAL:', error);
+  if (!shouldCompressImage(sourceSize, metadata.width)) {
     return {
       buffer: inputBuffer,
+      usedCompression: false,
+    };
+  }
+
+  const compressedBuffer = await image
+    .resize({
+      width: MAX_IMAGE_WIDTH,
+      fit: 'inside',
+      withoutEnlargement: true,
+    })
+    .jpeg({
+      quality: 80,
+      mozjpeg: true,
+    })
+    .toBuffer();
+
+  console.log('Compression succeeded:', {
+    originalBytes: sourceSize,
+    compressedBytes: compressedBuffer.byteLength,
+    width: metadata.width,
+    height: metadata.height,
+  });
+
+  return {
+    buffer: compressedBuffer,
+    usedCompression: true,
+  };
+};
+
+const maybeCompressImage = async (inputBuffer: Buffer, sourceSize: number): Promise<PreparedUpload> => {
+  let buffer = inputBuffer;
+
+  try {
+    return await compressWithSharp(buffer, sourceSize);
+  } catch (error) {
+    console.warn('Sharp failed, fallback to original file');
+    console.error('SHARP ERROR:', error);
+    return {
+      buffer,
       usedCompression: false,
     };
   }
