@@ -12,8 +12,7 @@ import {
   doc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/config';
 import { Product, Brand, Category } from '@/lib/types';
 import { dedupeCategories } from '@/lib/categories';
 import { useAuth } from '@/contexts/AuthContext';
@@ -64,9 +63,10 @@ type SizeStock = {
 
 type ColorForm = {
   name: string;
-  files: File[];
-  existingImages?: { url: string }[];
+  existingImages: { url: string }[];
   sizes: SizeStock[];
+  isUploading?: boolean;
+  hasUploadError?: boolean;
 };
 type AvailableColor = {
   id: string;
@@ -90,6 +90,7 @@ export default function AdminProductsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -142,8 +143,10 @@ const addColor = () =>
     ...prev,
     {
       name: '',
-      files: [],
+      existingImages: [],
       sizes: STANDARD_SIZES.map(s => ({ size: s, stock: 0 })),
+      isUploading: false,
+      hasUploadError: false,
     },
   ]);
 
@@ -153,12 +156,6 @@ const addColor = () =>
   const updateColorName = (index: number, value: string) => {
     const updated = [...colors];
     updated[index].name = value;
-    setColors(updated);
-  };
-
-  const updateColorFiles = (index: number, files: File[]) => {
-    const updated = [...colors];
-    updated[index].files = files;
     setColors(updated);
   };
 
@@ -184,16 +181,85 @@ const addColor = () =>
 setColors(
   product.colors?.map(c => ({
     name: c.name,
-    files: [],
-    existingImages: c.images || [],
+    existingImages: (c.images || []).filter((img: any) => img?.url),
     sizes: STANDARD_SIZES.map(size => {
       const found = c.sizes?.find((s: any) => s.size === size);
       return { size, stock: found ? found.stock : 0 };
     }),
+    isUploading: false,
+    hasUploadError: false,
   })) || []
 );
 
     setDialogOpen(true);
+  };
+
+  const uploadSingleImage = async (file: File): Promise<string> => {
+    const data = new FormData();
+    data.append('file', file);
+
+    const response = await fetch('/api/upload-image', {
+      method: 'POST',
+      body: data,
+    });
+
+    const json = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(json?.error || 'Image upload failed');
+    }
+
+    if (!json?.secure_url) {
+      throw new Error('Upload succeeded without secure URL');
+    }
+
+    return getOptimizedImage(json.secure_url, 1200);
+  };
+
+  const uploadColorFiles = async (colorIndex: number, files: File[]) => {
+    if (!files.length) return;
+
+    setColors((prev) => {
+      const next = [...prev];
+      if (!next[colorIndex]) return prev;
+      next[colorIndex] = {
+        ...next[colorIndex],
+        isUploading: true,
+        hasUploadError: false,
+      };
+      return next;
+    });
+
+    const uploaded = await Promise.allSettled(files.map((file) => uploadSingleImage(file)));
+    const successfulUrls = uploaded
+      .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+      .map((result) => result.value);
+    const failedUploads = uploaded.filter((result) => result.status === 'rejected');
+
+    setColors((prev) => {
+      const next = [...prev];
+      if (!next[colorIndex]) return prev;
+
+      next[colorIndex] = {
+        ...next[colorIndex],
+        existingImages: [
+          ...(next[colorIndex].existingImages || []),
+          ...successfulUrls.map((url) => ({ url })),
+        ],
+        isUploading: false,
+        hasUploadError: failedUploads.length > 0,
+      };
+
+      return next;
+    });
+
+    if (failedUploads.length > 0) {
+      toast({
+        title: 'Erreur upload',
+        description: `${failedUploads.length} image(s) n'ont pas pu etre uploadees.`,
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDelete = async (product: Product) => {
@@ -218,6 +284,24 @@ const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   if (!user) return;
 
+  if (colors.some((color) => color.isUploading)) {
+    toast({
+      title: 'Upload en cours',
+      description: 'Attendez la fin de l\'upload des images.',
+      variant: 'destructive',
+    });
+    return;
+  }
+
+  if (colors.some((color) => color.hasUploadError)) {
+    toast({
+      title: 'Images invalides',
+      description: 'Corrigez les uploads en erreur avant de sauvegarder.',
+      variant: 'destructive',
+    });
+    return;
+  }
+
   if (!formData.brandId || !formData.categoryId) {
     toast({
       title: 'Champs manquants',
@@ -228,6 +312,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 
   try {
+    setIsSaving(true);
     const slug = generateSlug(formData.name);
     const colorsData: any[] = [];
 
@@ -243,28 +328,20 @@ const handleSubmit = async (e: React.FormEvent) => {
         imageUrls = (color as any).existingImages.map((img: any) => img.url);
       }
 
-      // الصور الجديدة
-      if (color.files.length > 0) {
-        const uploaded = await Promise.all(
-          color.files.map(async (file) => {
-            const storageRef = ref(
-              storage,
-              `products/${slug}/${color.name}/${Date.now()}_${file.name}`
-            );
-
-            await uploadBytes(storageRef, file);
-            return await getDownloadURL(storageRef);
-          })
-        );
-
-        imageUrls = [...imageUrls, ...uploaded];
-      }
-
       /* ===== STOCK ===== */
 
       const validSizes = color.sizes.filter((s) => s.stock > 0);
 
       if (validSizes.length === 0) continue;
+
+      if (imageUrls.length === 0) {
+        toast({
+          title: 'Images manquantes',
+          description: `La couleur ${color.name} doit contenir au moins une image.`,
+          variant: 'destructive',
+        });
+        return;
+      }
 
       colorsData.push({
         colorId: generateSlug(color.name),
@@ -316,6 +393,8 @@ const handleSubmit = async (e: React.FormEvent) => {
       description: 'Erreur lors de la sauvegarde',
       variant: 'destructive',
     });
+  } finally {
+    setIsSaving(false);
   }
 };
   /* ================= RESET ================= */
@@ -331,6 +410,8 @@ const handleSubmit = async (e: React.FormEvent) => {
     });
 
     setEditingProduct(null);
+    setColors([]);
+    setIsSaving(false);
   };
 
   if (loading) return null;
@@ -463,11 +544,16 @@ const handleSubmit = async (e: React.FormEvent) => {
         <Input
           type="file"
           multiple
-          accept="image/*"
-          onChange={e =>
-            updateColorFiles(cIndex, Array.from(e.target.files || []))
-          }
+          accept="image/jpeg,image/png,image/webp"
+          onChange={async (e) => {
+            const files = Array.from(e.target.files || []);
+            e.currentTarget.value = '';
+            await uploadColorFiles(cIndex, files);
+          }}
         />
+        {color.isUploading && (
+          <p className="text-sm text-muted-foreground">Uploading...</p>
+        )}
         {color.existingImages && color.existingImages.length > 0 && (
   <div className="flex flex-wrap gap-2 mt-2">
     {color.existingImages.map((img, i) => (
@@ -524,12 +610,13 @@ const handleSubmit = async (e: React.FormEvent) => {
   </div>
 
   <div className="flex gap-2 pt-4">
-    <Button type="submit" className="flex-1">
-      {editingProduct ? 'Modifier' : 'Créer'}
+    <Button type="submit" className="flex-1" disabled={isSaving || colors.some((c) => c.isUploading)}>
+      {isSaving ? 'Enregistrement...' : editingProduct ? 'Modifier' : 'Creer'}
     </Button>
     <Button
       type="button"
       variant="outline"
+      disabled={isSaving}
       onClick={() => setDialogOpen(false)}
     >
       Annuler
