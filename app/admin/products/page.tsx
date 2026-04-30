@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { getOptimizedImage } from '@/lib/cloudinary';
-import { uploadProductImage } from '@/lib/cloudinaryDirectUpload';
+import { uploadImageDirect } from '@/lib/cloudinaryDirectUpload';
 import {
   collection,
   getDocs,
@@ -217,7 +217,7 @@ setColors(
 
   const uploadSingleImage = async (file: File): Promise<string> => {
     try {
-      return await uploadProductImage(file);
+      return await uploadImageDirect(file);
     } catch (error) {
       throw new Error(formatUploadError(error, file));
     }
