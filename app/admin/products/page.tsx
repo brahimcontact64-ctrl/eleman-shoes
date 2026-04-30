@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { getOptimizedImage } from '@/lib/cloudinary';
+import { uploadProductImage } from '@/lib/cloudinaryDirectUpload';
 import {
   collection,
   getDocs,
@@ -215,30 +216,8 @@ setColors(
   };
 
   const uploadSingleImage = async (file: File): Promise<string> => {
-    const data = new FormData();
-    data.append('file', file);
-
     try {
-      const response = await fetch('/api/upload-image', {
-        method: 'POST',
-        body: data,
-      });
-
-      const json = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        if (response.status === 413) {
-          throw new Error(`${file.name}: image too large for server upload.`);
-        }
-
-        throw new Error(json?.error ? `${file.name}: ${json.error}` : `${file.name}: image upload failed.`);
-      }
-
-      if (!json?.secure_url) {
-        throw new Error(`${file.name}: upload succeeded without secure URL.`);
-      }
-
-      return getOptimizedImage(json.secure_url, 1200);
+      return await uploadProductImage(file);
     } catch (error) {
       throw new Error(formatUploadError(error, file));
     }
@@ -603,7 +582,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           }}
         />
         {color.isUploading && (
-          <p className="text-sm text-muted-foreground">Uploading...</p>
+          <p className="text-sm text-muted-foreground">Uploading directly to Cloudinary...</p>
         )}
         {color.uploadFailures && color.uploadFailures.length > 0 && (
           <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
